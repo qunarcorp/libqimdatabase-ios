@@ -22,7 +22,7 @@ Startalk私有云是一种去中心化的部署方式，
 
 ## 介绍
 
-QIMCommon是一套高性能的IM组件
+QIMCommon是一套基于sqlite3.0框架的高性能的数据库组件
 
 ## 集成环境
 * 编译版本 : iOS SDK 9.0 及以上。
