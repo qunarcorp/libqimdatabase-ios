@@ -332,24 +332,24 @@ static void add_some_sql_log(NSString *sql) {
         _runningQueue = dispatch_queue_create("sqlite3_queue", nil);
     }
     
-    __block int rc = 0;
-    dispatch_sync(_runningQueue, ^{
-        rc = sqlite3_open([filePath UTF8String], (sqlite3**)&_database);
+    int rc = 0;
+//    dispatch_sync(_runningQueue, ^{
+        rc = sqlite3_open_v2([filePath UTF8String], (sqlite3**)&_database, SQLITE_OPEN_READWRITE|SQLITE_OPEN_FULLMUTEX|SQLITE_OPEN_CREATE, NULL);
         sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
         sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0);  //关闭内存统计
-        sqlite3_exec(_database, [@"PRAGMA locking_mode = exclusive;" UTF8String], NULL, NULL, NULL);
+//        sqlite3_exec(_database, [@"PRAGMA locking_mode = exclusive;" UTF8String], NULL, NULL, NULL);
         sqlite3_exec(_database, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
         sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
-    });
+//    });
     
     return rc == SQLITE_OK;
 }
 
 - (BOOL)close {
     __block int rc = 0;
-    dispatch_sync(_runningQueue, ^{
+//    dispatch_sync(_runningQueue, ^{
         rc = sqlite3_close(_database);
-    });
+//    });
     return rc == SQLITE_OK;
 }
 
@@ -559,7 +559,7 @@ static void add_some_sql_log(NSString *sql) {
     dispatch_queue_t current_thread = dispatch_get_current_queue();
     
     @autoreleasepool {
-        dispatch_async(_runningQueue, ^{
+//        dispatch_async(_runningQueue, ^{
             BOOL succeeded = [self executeNonQuery:sqlName withParameters:params];
             dispatch_async(current_thread, ^{
                 if (myCallback)
@@ -568,7 +568,7 @@ static void add_some_sql_log(NSString *sql) {
             });
             [sqlName release];
             [params release];
-        });
+//        });
     }
 }
 
@@ -589,7 +589,7 @@ static void add_some_sql_log(NSString *sql) {
     __block NSArray *params         = [parameters retain];
     dispatch_queue_t current_thread = dispatch_get_current_queue();
     
-    dispatch_async(_runningQueue, ^{
+//    dispatch_async(_runningQueue, ^{
         @autoreleasepool {
             @try {
                 sqlite3_stmt *stmt = nil;
@@ -613,7 +613,7 @@ static void add_some_sql_log(NSString *sql) {
                 [params release];
             }
         }
-    });
+//    });
 }
 
 - (void) databaseCheckpoint {
@@ -665,9 +665,9 @@ static void add_some_sql_log(NSString *sql) {
     
     if (transaction) {
         DatabaseFunction privateCallback  = [transaction copy];
-        dispatch_async([_database getCurrentQueue], ^{
+//        dispatch_async([_database getCurrentQueue], ^{
             BOOL succeeded = NO;
-            sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+            sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
             @try {
                 NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
                 privateCallback(_database);
@@ -682,7 +682,7 @@ static void add_some_sql_log(NSString *sql) {
                     sqlite3_exec([_database dbInstance], "rollback transaction", NULL, NULL, NULL);
                 [privateCallback release];
             }
-        });
+//        });
     }
 }
 
@@ -693,8 +693,8 @@ static void add_some_sql_log(NSString *sql) {
     }
     if (transaction) {
         DatabaseFunction privateCallback  = [transaction copy];
-        dispatch_sync([_database getCurrentQueue], ^{
-            sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+//        dispatch_sync([_database getCurrentQueue], ^{
+            sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
             @try {
                 @autoreleasepool {
                     privateCallback(_database);
@@ -705,7 +705,7 @@ static void add_some_sql_log(NSString *sql) {
                 sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
                 [privateCallback release];
             }
-        });
+//        });
     }
 }
 
@@ -718,8 +718,8 @@ static void add_some_sql_log(NSString *sql) {
         DatabaseFunction privateCallback    = [transaction copy];
         dispatch_block_t privateEnd         = [end copy];
         
-        dispatch_async([_database getCurrentQueue], ^{
-            sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+//        dispatch_async([_database getCurrentQueue], ^{
+            sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
             @try {
                 @autoreleasepool {
                     privateCallback(_database);
@@ -744,7 +744,7 @@ static void add_some_sql_log(NSString *sql) {
                     [privateEnd release];
                 }
             });
-        });
+//        });
     }
 }
 
@@ -756,7 +756,7 @@ static void add_some_sql_log(NSString *sql) {
         DatabaseFunction privateCallback    = [func copy];
         dispatch_block_t privateEnd         = [func2 copy];
         
-        dispatch_async([_database getCurrentQueue], ^{
+//        dispatch_async([_database getCurrentQueue], ^{
             @try {
                 @autoreleasepool {
                     privateCallback(_database);
@@ -781,14 +781,14 @@ static void add_some_sql_log(NSString *sql) {
                     [privateEnd release];
                 }
             });
-        });
+//        });
     }
 }
 - (void) syncWithoutTransaction:(DatabaseFunction) func {
     NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"syncWithoutTransaction");
     if (func) {
         DatabaseFunction privateCallback = [func copy];
-        dispatch_sync([_database getCurrentQueue], ^{
+//        dispatch_sync([_database getCurrentQueue], ^{
             @try {
                 privateCallback(_database);
             } @catch (NSException *exception) {
@@ -796,7 +796,7 @@ static void add_some_sql_log(NSString *sql) {
             } @finally {
                 [privateCallback release];
             }
-        });
+//        });
     }
 }
 
