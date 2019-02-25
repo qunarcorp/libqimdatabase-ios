@@ -59,8 +59,6 @@ static void add_some_sql_log(NSString *sql) {
 
 @implementation DataReader(Private)
 - (void)dealloc {
-    if (dispatch_get_current_queue() != [_database getCurrentQueue]) {
-    }
     
     sqlite3_stmt *stmt = (sqlite3_stmt*)_object;
     if (stmt)
@@ -232,11 +230,10 @@ static void add_some_sql_log(NSString *sql) {
 @implementation Database(Private)
 
 -(void)dealloc {
-    if (_path)
+    if (_path) {
         [_path release];
+    }
     [self close];
-    dispatch_release(_runningQueue);
-    
     [super dealloc];
 }
 
@@ -319,19 +316,10 @@ static void add_some_sql_log(NSString *sql) {
 
 @implementation Database
 
-- (dispatch_queue_t)getCurrentQueue {
-    return _runningQueue;
-}
-
 - (BOOL)open:(NSString *)filePath usingCurrentThread:(BOOL)usingCurrentThread {
     if (filePath != nil && [filePath length] > 0)
         _path = [filePath retain];
-    if (usingCurrentThread)
-        _runningQueue = dispatch_get_current_queue();
-    else {
-        _runningQueue = dispatch_queue_create("sqlite3_queue", nil);
-    }
-    
+
     int rc = 0;
     rc = sqlite3_open_v2([filePath UTF8String], (sqlite3**)&_database, SQLITE_OPEN_READWRITE|SQLITE_OPEN_FULLMUTEX|SQLITE_OPEN_CREATE, NULL);
     sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
@@ -652,8 +640,6 @@ static void add_some_sql_log(NSString *sql) {
 
 
 - (void) usingTransaction:(DatabaseFunction) transaction {
-    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"");
-    
     if (transaction) {
         DatabaseFunction privateCallback  = [transaction copy];
         BOOL succeeded = NO;
@@ -676,7 +662,7 @@ static void add_some_sql_log(NSString *sql) {
 }
 
 - (void) syncUsingTransaction:(DatabaseFunction) transaction {
-    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"SyncUsingTransaction Queue Error");
+//    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"SyncUsingTransaction Queue Error");
     if (dispatch_get_current_queue() == dispatch_get_main_queue()) {
 //        NSLog(@"now in main_queue");
     }
@@ -698,8 +684,6 @@ static void add_some_sql_log(NSString *sql) {
 
 - (void) usingTransaction:(DatabaseFunction)transaction
              withComplate:(dispatch_block_t) end {
-    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"");
-    
     if (transaction && end) {
         dispatch_queue_t currentQueue       = dispatch_get_main_queue();
         DatabaseFunction privateCallback    = [transaction copy];
@@ -735,7 +719,6 @@ static void add_some_sql_log(NSString *sql) {
 
 - (void) beginWithoutTransaction:(DatabaseFunction) func
                     withComplate:(dispatch_block_t) func2 {
-    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"beginWithoutTransaction Queue Error");
     if (func && func2) {
         dispatch_queue_t currentQueue       = dispatch_get_current_queue();
         DatabaseFunction privateCallback    = [func copy];
@@ -768,7 +751,6 @@ static void add_some_sql_log(NSString *sql) {
     }
 }
 - (void) syncWithoutTransaction:(DatabaseFunction) func {
-    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"syncWithoutTransaction");
     if (func) {
         DatabaseFunction privateCallback = [func copy];
         @try {
