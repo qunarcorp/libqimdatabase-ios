@@ -59,7 +59,9 @@ static void add_some_sql_log(NSString *sql) {
 
 @implementation DataReader(Private)
 - (void)dealloc {
-    
+    if (dispatch_get_current_queue() != [_database getCurrentQueue]) {
+    }
+
     sqlite3_stmt *stmt = (sqlite3_stmt*)_object;
     if (stmt)
         sqlite3_finalize(stmt);
@@ -108,7 +110,7 @@ static void add_some_sql_log(NSString *sql) {
         sqlite3_stmt *stmt = (sqlite3_stmt*)_object;
         int column = -1;
         int count = sqlite3_column_count(stmt);
-        
+
         if (count) {
             for (int i = 0; i < count; ++i) {
                 if (strcmp([columnName UTF8String], sqlite3_column_name(stmt, i)) == 0) {
@@ -117,10 +119,10 @@ static void add_some_sql_log(NSString *sql) {
                 }
             }
         }
-        
+
         if (column == -1)
             return nil;
-        
+
         switch (sqlite3_column_type(stmt, column)) {
             case SQLITE_INTEGER: {
                 value = [[NSNumber alloc] initWithLongLong:sqlite3_column_int64(stmt, column)];
@@ -230,10 +232,11 @@ static void add_some_sql_log(NSString *sql) {
 @implementation Database(Private)
 
 -(void)dealloc {
-    if (_path) {
+    if (_path)
         [_path release];
-    }
     [self close];
+    dispatch_release(_runningQueue);
+
     [super dealloc];
 }
 
@@ -265,23 +268,23 @@ static void add_some_sql_log(NSString *sql) {
 
 - (BOOL) setParameters:(sqlite3_stmt *)stmt
         withParameters:(NSArray*) parameters {
-    
+
     BOOL succeeded = NO;
-    
+
     int count = sqlite3_bind_parameter_count(stmt);
     if ((parameters == nil || [parameters count] == 0) && count == 0)
         return YES;
-    
+
     @try {
         if (parameters == nil || [parameters count] == 0)
             [NSException raise:@"NSCheckParameterException" format:@"参数为空。默认情况下不允许。"];
         if (count != [parameters count])
             [NSException raise:@"NSCheckParameterException" format:@"参数错误，需要 %d 个参数， 但传入了 %lu 个参数", count, (unsigned long)[parameters count]];
-        
+
         int rc = 0;
         int inc = 1;
         int index = 0;
-        
+
         for (int i = 0; i < count; ++i) {
             id obj = [parameters objectAtIndex:i];
             index = i + inc;
@@ -300,7 +303,7 @@ static void add_some_sql_log(NSString *sql) {
                     rc = sqlite3_bind_text(stmt, index, [[obj description] UTF8String], -1, SQLITE_TRANSIENT);
             } else
                 rc = sqlite3_bind_text(stmt, index, [[obj description] UTF8String], -1, SQLITE_TRANSIENT);
-            
+
             if (rc != SQLITE_OK)
                 [NSException raise:@"" format:@""];
         }
@@ -316,9 +319,18 @@ static void add_some_sql_log(NSString *sql) {
 
 @implementation Database
 
+- (dispatch_queue_t)getCurrentQueue {
+    return _runningQueue;
+}
+
 - (BOOL)open:(NSString *)filePath usingCurrentThread:(BOOL)usingCurrentThread {
     if (filePath != nil && [filePath length] > 0)
         _path = [filePath retain];
+    if (usingCurrentThread)
+        _runningQueue = dispatch_get_current_queue();
+    else {
+        _runningQueue = dispatch_queue_create("sqlite3_queue", nil);
+    }
 
     int rc = 0;
     rc = sqlite3_open_v2([filePath UTF8String], (sqlite3**)&_database, SQLITE_OPEN_READWRITE|SQLITE_OPEN_FULLMUTEX|SQLITE_OPEN_CREATE, NULL);
@@ -327,7 +339,7 @@ static void add_some_sql_log(NSString *sql) {
 //        sqlite3_exec(_database, [@"PRAGMA locking_mode = exclusive;" UTF8String], NULL, NULL, NULL);
     sqlite3_exec(_database, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
     sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
-    
+
     return rc == SQLITE_OK;
 }
 
@@ -349,7 +361,7 @@ static void add_some_sql_log(NSString *sql) {
                     NSLog(@"execCommand %@ Result : %d  - [%s]", command, status, sqlite3_errmsg(_database));
                 }
             } @catch (NSException *exception) {
-                
+
 //                NSLog(@"executeNonQuery:withParameters: cast an Error! \nSQL:%@\nandObjs:%@\n%@ at %@\n%s",
 //                           sqlName,
 //                           params,
@@ -365,15 +377,15 @@ static void add_some_sql_log(NSString *sql) {
 
 - (DataReader *)executeReader:(NSString *)sqlName
                withParameters:(NSArray *)params {
-    
+
     ADD_LOG(sqlName);
-    
+
     if (sqlName == nil || [sqlName length] <= 0) {
         NSLog(@"executeReader and sqlName is nil");
         return nil;
     }
     sqlite3_stmt *stmt = nil;
-    
+
     @autoreleasepool {
         @try {
             int ret = sqlite3_prepare_v2(_database, [sqlName UTF8String], -1, &stmt, nil);
@@ -388,7 +400,7 @@ static void add_some_sql_log(NSString *sql) {
                        params,
                        exception,
                        [exception callStackSymbols]);
-            
+
             if (stmt)
                 sqlite3_finalize(stmt);
             return nil;
@@ -535,12 +547,12 @@ static void add_some_sql_log(NSString *sql) {
             callback(NO);
         return;
     }
-    
+
     void (^myCallback)(BOOL)        = [callback copy];
     __block NSString *sqlName       = [sql retain];
     __block NSArray *params         = [parameters retain];
     dispatch_queue_t current_thread = dispatch_get_current_queue();
-    
+
     @autoreleasepool {
         BOOL succeeded = [self executeNonQuery:sqlName withParameters:params];
         dispatch_async(current_thread, ^{
@@ -556,20 +568,20 @@ static void add_some_sql_log(NSString *sql) {
 - (void) asyncExecuteReader:(NSString*) sql
              withParameters:(NSArray *) parameters
                   withBlock:(void(^)(DataReader*)) callback {
-    
+
     if (callback == nil)
         return;
-    
+
     if (_database == nil) {
         callback(nil);
         return;
     }
-    
+
     void(^myCallback)(DataReader*)  = [callback copy];
     __block NSString *sqlName       = [sql retain];
     __block NSArray *params         = [parameters retain];
     dispatch_queue_t current_thread = dispatch_get_current_queue();
-    
+
     @autoreleasepool {
         @try {
             sqlite3_stmt *stmt = nil;
@@ -640,6 +652,8 @@ static void add_some_sql_log(NSString *sql) {
 
 
 - (void) usingTransaction:(DatabaseFunction) transaction {
+    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"");
+
     if (transaction) {
         DatabaseFunction privateCallback  = [transaction copy];
         BOOL succeeded = NO;
@@ -662,7 +676,7 @@ static void add_some_sql_log(NSString *sql) {
 }
 
 - (void) syncUsingTransaction:(DatabaseFunction) transaction {
-//    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"SyncUsingTransaction Queue Error");
+    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"SyncUsingTransaction Queue Error");
     if (dispatch_get_current_queue() == dispatch_get_main_queue()) {
 //        NSLog(@"now in main_queue");
     }
@@ -684,11 +698,13 @@ static void add_some_sql_log(NSString *sql) {
 
 - (void) usingTransaction:(DatabaseFunction)transaction
              withComplate:(dispatch_block_t) end {
+    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"");
+
     if (transaction && end) {
         dispatch_queue_t currentQueue       = dispatch_get_main_queue();
         DatabaseFunction privateCallback    = [transaction copy];
         dispatch_block_t privateEnd         = [end copy];
-        
+
         sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
         @try {
             @autoreleasepool {
@@ -702,7 +718,7 @@ static void add_some_sql_log(NSString *sql) {
             sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
             [privateCallback release];
         }
-        
+
         dispatch_async(currentQueue, ^{
             @try {
                 privateEnd();
@@ -719,11 +735,12 @@ static void add_some_sql_log(NSString *sql) {
 
 - (void) beginWithoutTransaction:(DatabaseFunction) func
                     withComplate:(dispatch_block_t) func2 {
+    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"beginWithoutTransaction Queue Error");
     if (func && func2) {
         dispatch_queue_t currentQueue       = dispatch_get_current_queue();
         DatabaseFunction privateCallback    = [func copy];
         dispatch_block_t privateEnd         = [func2 copy];
-        
+
         @try {
             @autoreleasepool {
                 privateCallback(_database);
@@ -736,7 +753,7 @@ static void add_some_sql_log(NSString *sql) {
             // mark by liudan(@"commit transaction");
             [privateCallback release];
         }
-        
+
         dispatch_async(currentQueue, ^{
             @try {
                 privateEnd();
@@ -751,6 +768,7 @@ static void add_some_sql_log(NSString *sql) {
     }
 }
 - (void) syncWithoutTransaction:(DatabaseFunction) func {
+    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"syncWithoutTransaction");
     if (func) {
         DatabaseFunction privateCallback = [func copy];
         @try {
