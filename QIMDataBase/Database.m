@@ -59,6 +59,8 @@ static void add_some_sql_log(NSString *sql) {
 
 @implementation DataReader(Private)
 - (void)dealloc {
+    if (dispatch_get_current_queue() != [_database getCurrentQueue]) {
+    }
     
     sqlite3_stmt *stmt = (sqlite3_stmt*)_object;
     if (stmt)
@@ -230,10 +232,11 @@ static void add_some_sql_log(NSString *sql) {
 @implementation Database(Private)
 
 -(void)dealloc {
-    if (_path) {
+    if (_path)
         [_path release];
-    }
     [self close];
+    dispatch_release(_runningQueue);
+    
     [super dealloc];
 }
 
@@ -316,23 +319,37 @@ static void add_some_sql_log(NSString *sql) {
 
 @implementation Database
 
+- (dispatch_queue_t)getCurrentQueue {
+    return _runningQueue;
+}
+
 - (BOOL)open:(NSString *)filePath usingCurrentThread:(BOOL)usingCurrentThread {
     if (filePath != nil && [filePath length] > 0)
         _path = [filePath retain];
+    if (usingCurrentThread)
+        _runningQueue = dispatch_get_current_queue();
+    else {
+        _runningQueue = dispatch_queue_create("sqlite3_queue", nil);
+    }
     
-    int rc = 0;
-    rc = sqlite3_open_v2([filePath UTF8String], (sqlite3**)&_database, SQLITE_OPEN_READWRITE|SQLITE_OPEN_FULLMUTEX|SQLITE_OPEN_CREATE, NULL);
-    sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
-    sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0);  //关闭内存统计
-    //        sqlite3_exec(_database, [@"PRAGMA locking_mode = exclusive;" UTF8String], NULL, NULL, NULL);
-    sqlite3_exec(_database, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
-    sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
+    __block int rc = 0;
+    dispatch_sync(_runningQueue, ^{
+        rc = sqlite3_open([filePath UTF8String], (sqlite3**)&_database);
+        sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
+        sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0);  //关闭内存统计
+        sqlite3_exec(_database, [@"PRAGMA locking_mode = exclusive;" UTF8String], NULL, NULL, NULL);
+        sqlite3_exec(_database, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
+        sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
+    });
     
     return rc == SQLITE_OK;
 }
 
 - (BOOL)close {
-    int rc = sqlite3_close(_database);
+    __block int rc = 0;
+    dispatch_sync(_runningQueue, ^{
+        rc = sqlite3_close(_database);
+    });
     return rc == SQLITE_OK;
 }
 
@@ -542,14 +559,16 @@ static void add_some_sql_log(NSString *sql) {
     dispatch_queue_t current_thread = dispatch_get_current_queue();
     
     @autoreleasepool {
-        BOOL succeeded = [self executeNonQuery:sqlName withParameters:params];
-        dispatch_async(current_thread, ^{
-            if (myCallback)
-                myCallback(succeeded);
-            [myCallback release];
+        dispatch_async(_runningQueue, ^{
+            BOOL succeeded = [self executeNonQuery:sqlName withParameters:params];
+            dispatch_async(current_thread, ^{
+                if (myCallback)
+                    myCallback(succeeded);
+                [myCallback release];
+            });
+            [sqlName release];
+            [params release];
         });
-        [sqlName release];
-        [params release];
     }
 }
 
@@ -570,29 +589,31 @@ static void add_some_sql_log(NSString *sql) {
     __block NSArray *params         = [parameters retain];
     dispatch_queue_t current_thread = dispatch_get_current_queue();
     
-    @autoreleasepool {
-        @try {
-            sqlite3_stmt *stmt = nil;
-            int ret = sqlite3_prepare_v2(_database, [sqlName UTF8String], -1, &stmt, nil);
-            DatabaseAssert(ret == SQLITE_OK && stmt);
-            DatabaseAssert([self setParameters:stmt withParameters:params]);
-            dispatch_async(current_thread, ^{
-                myCallback([[[DataReader alloc] initWithStmt:stmt withDatabase:self] autorelease]);
-            });
-        } @catch (NSException *exception) {
-            if (myCallback) {
+    dispatch_async(_runningQueue, ^{
+        @autoreleasepool {
+            @try {
+                sqlite3_stmt *stmt = nil;
+                int ret = sqlite3_prepare_v2(_database, [sqlName UTF8String], -1, &stmt, nil);
+                DatabaseAssert(ret == SQLITE_OK && stmt);
+                DatabaseAssert([self setParameters:stmt withParameters:params]);
                 dispatch_async(current_thread, ^{
-                    //
-                    // 线程切换，所有这里的代码都有可能发生问题。先这样。回头再改。
-                    myCallback(nil);
+                    myCallback([[[DataReader alloc] initWithStmt:stmt withDatabase:self] autorelease]);
                 });
+            } @catch (NSException *exception) {
+                if (myCallback) {
+                    dispatch_async(current_thread, ^{
+                        //
+                        // 线程切换，所有这里的代码都有可能发生问题。先这样。回头再改。
+                        myCallback(nil);
+                    });
+                }
+            } @finally {
+                [myCallback release];
+                [sqlName release];
+                [params release];
             }
-        } @finally {
-            [myCallback release];
-            [sqlName release];
-            [params release];
         }
-    }
+    });
 }
 
 - (void) databaseCheckpoint {
@@ -640,126 +661,142 @@ static void add_some_sql_log(NSString *sql) {
 
 
 - (void) usingTransaction:(DatabaseFunction) transaction {
+    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"");
+    
     if (transaction) {
         DatabaseFunction privateCallback  = [transaction copy];
-        BOOL succeeded = NO;
-        sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
-        @try {
-            NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-            privateCallback(_database);
-            [pool release];
-            succeeded = YES;
-        } @catch (NSException *exception) {
-            NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
-        } @finally {
-            if (succeeded)
-                sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
-            else
-                sqlite3_exec([_database dbInstance], "rollback transaction", NULL, NULL, NULL);
-            [privateCallback release];
-        }
+        dispatch_async([_database getCurrentQueue], ^{
+            BOOL succeeded = NO;
+            sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+            @try {
+                NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+                privateCallback(_database);
+                [pool release];
+                succeeded = YES;
+            } @catch (NSException *exception) {
+                NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
+            } @finally {
+                if (succeeded)
+                    sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
+                else
+                    sqlite3_exec([_database dbInstance], "rollback transaction", NULL, NULL, NULL);
+                [privateCallback release];
+            }
+        });
     }
 }
 
 - (void) syncUsingTransaction:(DatabaseFunction) transaction {
-    //    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"SyncUsingTransaction Queue Error");
-    if (dispatch_get_current_queue() == dispatch_get_main_queue()) {
-        //        NSLog(@"now in main_queue");
-    }
+    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"SyncUsingTransaction Queue Error");
+    //    if (dispatch_get_current_queue() == dispatch_get_main_queue()) {
+    //        NSLog(@"now in main_queue");
+    //    }
     if (transaction) {
         DatabaseFunction privateCallback  = [transaction copy];
-        sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
-        @try {
-            @autoreleasepool {
-                privateCallback(_database);
+        dispatch_sync([_database getCurrentQueue], ^{
+            sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+            @try {
+                @autoreleasepool {
+                    privateCallback(_database);
+                }
+            } @catch (NSException *exception) {
+                NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
+            } @finally {
+                sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
+                [privateCallback release];
             }
-        } @catch (NSException *exception) {
-            NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
-        } @finally {
-            sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
-            [privateCallback release];
-        }
+        });
     }
 }
 
 - (void) usingTransaction:(DatabaseFunction)transaction
              withComplate:(dispatch_block_t) end {
+    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"");
+    
     if (transaction && end) {
         dispatch_queue_t currentQueue       = dispatch_get_main_queue();
         DatabaseFunction privateCallback    = [transaction copy];
         dispatch_block_t privateEnd         = [end copy];
         
-        sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
-        @try {
-            @autoreleasepool {
-                privateCallback(_database);
-            }
-        }
-        @catch (NSException *exception) {
-            NSLog(@"usingTransaction:withComplate: cast a Error! %@ at %@", exception, [exception callStackSymbols]);
-        }
-        @finally {
-            sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
-            [privateCallback release];
-        }
-        
-        dispatch_async(currentQueue, ^{
+        dispatch_async([_database getCurrentQueue], ^{
+            sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
             @try {
-                privateEnd();
+                @autoreleasepool {
+                    privateCallback(_database);
+                }
             }
             @catch (NSException *exception) {
-                NSLog(exception, @"usingTransaction:withComplate catch a error!");
+                NSLog(@"usingTransaction:withComplate: cast a Error! %@ at %@", exception, [exception callStackSymbols]);
             }
             @finally {
-                [privateEnd release];
+                sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
+                [privateCallback release];
             }
+            
+            dispatch_async(currentQueue, ^{
+                @try {
+                    privateEnd();
+                }
+                @catch (NSException *exception) {
+                    NSLog(exception, @"usingTransaction:withComplate catch a error!");
+                }
+                @finally {
+                    [privateEnd release];
+                }
+            });
         });
     }
 }
 
 - (void) beginWithoutTransaction:(DatabaseFunction) func
                     withComplate:(dispatch_block_t) func2 {
+    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"beginWithoutTransaction Queue Error");
     if (func && func2) {
         dispatch_queue_t currentQueue       = dispatch_get_current_queue();
         DatabaseFunction privateCallback    = [func copy];
         dispatch_block_t privateEnd         = [func2 copy];
         
-        @try {
-            @autoreleasepool {
-                privateCallback(_database);
-            }
-        }
-        @catch (NSException *exception) {
-            NSLog(@"usingTransaction:withComplate: cast a Error! %@ at %@", exception, [exception callStackSymbols]);
-        }
-        @finally {
-            // mark by liudan(@"commit transaction");
-            [privateCallback release];
-        }
-        
-        dispatch_async(currentQueue, ^{
+        dispatch_async([_database getCurrentQueue], ^{
             @try {
-                privateEnd();
+                @autoreleasepool {
+                    privateCallback(_database);
+                }
             }
             @catch (NSException *exception) {
-                NSLog(exception, @"usingTransaction:withComplate catch a error!");
+                NSLog(@"usingTransaction:withComplate: cast a Error! %@ at %@", exception, [exception callStackSymbols]);
             }
             @finally {
-                [privateEnd release];
+                // mark by liudan(@"commit transaction");
+                [privateCallback release];
             }
+            
+            dispatch_async(currentQueue, ^{
+                @try {
+                    privateEnd();
+                }
+                @catch (NSException *exception) {
+                    NSLog(exception, @"usingTransaction:withComplate catch a error!");
+                }
+                @finally {
+                    [privateEnd release];
+                }
+            });
         });
     }
 }
 - (void) syncWithoutTransaction:(DatabaseFunction) func {
+    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"syncWithoutTransaction");
     if (func) {
         DatabaseFunction privateCallback = [func copy];
-        @try {
-            privateCallback(_database);
-        } @catch (NSException *exception) {
-            NSLog(@"syncWithoutTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
-        } @finally {
-            [privateCallback release];
-        }
+        dispatch_sync([_database getCurrentQueue], ^{
+            @try {
+                privateCallback(_database);
+            } @catch (NSException *exception) {
+                NSLog(@"syncWithoutTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
+            } @finally {
+                [privateCallback release];
+            }
+        });
     }
 }
 
