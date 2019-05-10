@@ -316,19 +316,45 @@ static void add_some_sql_log(NSString *sql) {
 
 @implementation Database
 
+- (dispatch_queue_t)getCurrentQueue {
+    return _runningQueue;
+}
+
 - (BOOL)open:(NSString *)filePath usingCurrentThread:(BOOL)usingCurrentThread {
     if (filePath != nil && [filePath length] > 0)
         _path = [filePath retain];
     
-    int rc = 0;
-    rc = sqlite3_open_v2([filePath UTF8String], (sqlite3**)&_database, SQLITE_OPEN_READWRITE|SQLITE_OPEN_FULLMUTEX|SQLITE_OPEN_CREATE, NULL);
-    sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
-    sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0);  //关闭内存统计
-    //        sqlite3_exec(_database, [@"PRAGMA locking_mode = exclusive;" UTF8String], NULL, NULL, NULL);
-    sqlite3_exec(_database, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
-    sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
-    
-    return rc == SQLITE_OK;
+    if (usingCurrentThread)
+        _runningQueue = dispatch_get_current_queue();
+    else {
+        _runningQueue = dispatch_queue_create("sqlite3_queue", nil);
+    }
+    NSString *version = [UIDevice currentDevice].systemVersion;
+    if (version.doubleValue >= 11.0) {
+        
+        int rc = 0;
+        rc = sqlite3_open_v2([filePath UTF8String], (sqlite3**)&_database, SQLITE_OPEN_READWRITE|SQLITE_OPEN_FULLMUTEX|SQLITE_OPEN_CREATE, NULL);
+        sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
+        sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0);  //关闭内存统计
+        //        sqlite3_exec(_database, [@"PRAGMA locking_mode = exclusive;" UTF8String], NULL, NULL, NULL);
+        sqlite3_exec(_database, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
+        sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
+        
+        return rc == SQLITE_OK;
+    } else {
+        
+        __block int rc = 0;
+        dispatch_sync(_runningQueue, ^{
+            rc = sqlite3_open([filePath UTF8String], (sqlite3**)&_database);
+            sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
+            sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0);  //关闭内存统计
+            sqlite3_exec(_database, [@"PRAGMA locking_mode = exclusive;" UTF8String], NULL, NULL, NULL);
+            sqlite3_exec(_database, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
+            sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
+        });
+        
+        return rc == SQLITE_OK;
+    }
 }
 
 - (BOOL)close {
@@ -350,12 +376,12 @@ static void add_some_sql_log(NSString *sql) {
                 }
             } @catch (NSException *exception) {
                 
-                //                NSLog(@"executeNonQuery:withParameters: cast an Error! \nSQL:%@\nandObjs:%@\n%@ at %@\n%s",
-                //                           sqlName,
-                //                           params,
-                //                           exception,
-                //                           [exception callStackSymbols],
-                //                           (_database ? sqlite3_errmsg(_database) : ""));
+//                NSLog(@"executeNonQuery:withParameters: cast an Error! \nSQL:%@\nandObjs:%@\n%@ at %@\n%s",
+//                           sqlName,
+//                           params,
+//                           exception,
+//                           [exception callStackSymbols],
+//                           (_database ? sqlite3_errmsg(_database) : ""));
             } @finally {
             }
         }
@@ -642,21 +668,43 @@ static void add_some_sql_log(NSString *sql) {
 - (void) usingTransaction:(DatabaseFunction) transaction {
     if (transaction) {
         DatabaseFunction privateCallback  = [transaction copy];
-        BOOL succeeded = NO;
-        sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
-        @try {
-            NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-            privateCallback(_database);
-            [pool release];
-            succeeded = YES;
-        } @catch (NSException *exception) {
-            NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
-        } @finally {
-            if (succeeded)
+        __block BOOL succeeded = NO;
+        NSString *version = [UIDevice currentDevice].systemVersion;
+        if (version.doubleValue >= 11.0) {
+            sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
+            @try {
+                NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+                privateCallback(_database);
+                [pool release];
+                succeeded = YES;
+            } @catch (NSException *exception) {
+                NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
+            } @finally {
+                if (succeeded)
                 sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
-            else
+                else
                 sqlite3_exec([_database dbInstance], "rollback transaction", NULL, NULL, NULL);
-            [privateCallback release];
+                [privateCallback release];
+            }
+        } else {
+            dispatch_sync([_database getCurrentQueue], ^{
+
+                sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+                @try {
+                    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+                    privateCallback(_database);
+                    [pool release];
+                    succeeded = YES;
+                } @catch (NSException *exception) {
+                    NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
+                } @finally {
+                    if (succeeded)
+                    sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
+                    else
+                    sqlite3_exec([_database dbInstance], "rollback transaction", NULL, NULL, NULL);
+                    [privateCallback release];
+                }
+            });
         }
     }
 }
@@ -666,18 +714,38 @@ static void add_some_sql_log(NSString *sql) {
     if (dispatch_get_current_queue() == dispatch_get_main_queue()) {
         //        NSLog(@"now in main_queue");
     }
-    if (transaction) {
-        DatabaseFunction privateCallback  = [transaction copy];
-        sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
-        @try {
-            @autoreleasepool {
-                privateCallback(_database);
+    NSString *version = [UIDevice currentDevice].systemVersion;
+    if (version.doubleValue >= 11.0) {
+        if (transaction) {
+            DatabaseFunction privateCallback  = [transaction copy];
+            sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
+            @try {
+                @autoreleasepool {
+                    privateCallback(_database);
+                }
+            } @catch (NSException *exception) {
+                NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
+            } @finally {
+                sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
+                [privateCallback release];
             }
-        } @catch (NSException *exception) {
-            NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
-        } @finally {
-            sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
-            [privateCallback release];
+        }
+    } else {
+        if (transaction) {
+            DatabaseFunction privateCallback  = [transaction copy];
+            dispatch_sync([_database getCurrentQueue], ^{
+                sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+                @try {
+                    @autoreleasepool {
+                        privateCallback(_database);
+                    }
+                } @catch (NSException *exception) {
+                    NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
+                } @finally {
+                    sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
+                    [privateCallback release];
+                }
+            });
         }
     }
 }
@@ -688,8 +756,12 @@ static void add_some_sql_log(NSString *sql) {
         dispatch_queue_t currentQueue       = dispatch_get_main_queue();
         DatabaseFunction privateCallback    = [transaction copy];
         dispatch_block_t privateEnd         = [end copy];
-        
-        sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
+        NSString *version = [UIDevice currentDevice].systemVersion;
+        if (version.doubleValue >= 11.0) {
+            sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
+        } else {
+            sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+        }
         @try {
             @autoreleasepool {
                 privateCallback(_database);
