@@ -335,10 +335,8 @@ static void add_some_sql_log(NSString *sql) {
         int rc = 0;
         rc = sqlite3_open_v2([filePath UTF8String], (sqlite3**)&_database, SQLITE_OPEN_READWRITE|SQLITE_OPEN_FULLMUTEX|SQLITE_OPEN_CREATE, NULL);
         sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
-        sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0);  //关闭内存统计
-        //        sqlite3_exec(_database, [@"PRAGMA locking_mode = exclusive;" UTF8String], NULL, NULL, NULL);
         sqlite3_exec(_database, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
-        sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
+//        sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
         
         return rc == SQLITE_OK;
     } else {
@@ -347,10 +345,8 @@ static void add_some_sql_log(NSString *sql) {
         dispatch_sync(_runningQueue, ^{
             rc = sqlite3_open([filePath UTF8String], (sqlite3**)&_database);
             sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
-            sqlite3_config(SQLITE_CONFIG_MEMSTATUS, 0);  //关闭内存统计
-            sqlite3_exec(_database, [@"PRAGMA locking_mode = exclusive;" UTF8String], NULL, NULL, NULL);
             sqlite3_exec(_database, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
-            sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
+//            sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
         });
         
         return rc == SQLITE_OK;
@@ -373,6 +369,13 @@ static void add_some_sql_log(NSString *sql) {
                 if (status != SQLITE_OK)
                 {
                     NSLog(@"execCommand %@ Result : %d  - [%s]", command, status, sqlite3_errmsg(_database));
+                    if (status == SQLITE_CORRUPT || status == SQLITE_IOERR) {
+                        NSLog(@"sqlite 执行execCommand: 出现异常 : %ld", status);
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [[NSNotificationCenter defaultCenter] postNotificationName:@"QIMSQLiteErrorNotification" object:nil];
+                        });
+                    } else {
+                    }
                 }
             } @catch (NSException *exception) {
                 
@@ -403,10 +406,21 @@ static void add_some_sql_log(NSString *sql) {
     @autoreleasepool {
         @try {
             int ret = sqlite3_prepare_v2(_database, [sqlName UTF8String], -1, &stmt, nil);
-            if (ret != SQLITE_OK)
+            if (ret != SQLITE_OK) {
                 NSLog(@"%s, ON\n%@\nWith\n%@", (_database ? sqlite3_errmsg(_database) : ""), sqlName, params);
+                if (ret == SQLITE_CORRUPT || ret == SQLITE_IOERR) {
+                    NSLog(@"sqlite 执行executeReader:(NSString *)sqlName withParameters:(NSArray *)params: 出现异常 : %ld", ret);
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [[NSNotificationCenter defaultCenter] postNotificationName:@"QIMSQLiteErrorNotification" object:nil];
+                    });
+                } else {
+                }
+            } else {
+                
+            }
             DatabaseAssert(ret == SQLITE_OK && stmt);
-            DatabaseAssert([self setParameters:stmt withParameters:params]);
+            BOOL successed = [self setParameters:stmt withParameters:params];
+            DatabaseAssert(successed == YES);
         } @catch (NSException *exception) {
             NSLog(@"executeReader:withParameters: cast a %s Error! \nSQL:%@\nandObjs:%@\n%@ at %@",
                   (_database ? sqlite3_errmsg(_database) : ""),
@@ -453,14 +467,26 @@ static void add_some_sql_log(NSString *sql) {
         @autoreleasepool {
             sqlite3_stmt *stmt = nil;
             @try {
-                if (!((sqlite3_prepare_v2(_database, [sqlName UTF8String], -1, &stmt, nil) == SQLITE_OK) && stmt))
+                if (!((sqlite3_prepare_v2(_database, [sqlName UTF8String], -1, &stmt, nil) == SQLITE_OK) && stmt)) {
                     [NSException raise:@"NSDatabaseException" format:@""];
+                } else {
+                    
+                }
                 for (NSArray *perParams in params) {
                     DatabaseAssert([self setParameters:stmt withParameters:perParams]);
-                    DatabaseAssert(sqlite3_step(stmt) == SQLITE_DONE);
+                    int ret = sqlite3_step(stmt);
+                    if (ret == SQLITE_CORRUPT || ret == SQLITE_IOERR) {
+                        NSLog(@"sqlite 执行executeBulkInsert:(NSString *)sqlName withParameters: 出现异常 : %ld", ret);
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [[NSNotificationCenter defaultCenter] postNotificationName:@"QIMSQLiteErrorNotification" object:nil];
+                        });
+                        succeeded = NO;
+                    } else {
+                        succeeded = YES;
+                    }
+                    DatabaseAssert(ret == SQLITE_DONE);
                     sqlite3_reset(stmt);
                 }
-                succeeded = YES;
             } @catch (NSException *exception) {
                 NSLog(@"executeNonQuery:withParameters: cast an Error! \nSQL:%@\nandObjs:%@\n%@ at %@\n%s",
                       sqlName,
@@ -496,8 +522,17 @@ static void add_some_sql_log(NSString *sql) {
                 if (!((sqlite3_prepare_v2(_database, [sqlName UTF8String], -1, &stmt, nil) == SQLITE_OK) && stmt))
                     [NSException raise:@"NSDatabaseException" format:@""];
                 DatabaseAssert([self setParameters:stmt withParameters:params]);
-                DatabaseAssert(sqlite3_step(stmt) == SQLITE_DONE);
-                succeeded = YES;
+                int ret = sqlite3_step(stmt);
+                DatabaseAssert(ret == SQLITE_DONE);
+                if (ret == SQLITE_CORRUPT || ret == SQLITE_IOERR) {
+                    NSLog(@"sqlite 执行executeNonQuery:withParameters: 出现异常 : %ld", ret);
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [[NSNotificationCenter defaultCenter] postNotificationName:@"QIMSQLiteErrorNotification" object:nil];
+                    });
+                    succeeded = NO;
+                } else {
+                    succeeded = YES;
+                }
             } @catch (NSException *exception) {
                 NSLog(@"executeNonQuery:withParameters: cast an Error! \nSQL:%@\nandObjs:%@\n%@ at %@\n%s",
                       sqlName,
