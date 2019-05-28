@@ -65,6 +65,16 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (instancetype)databasePoolWithPath:(NSString * _Nullable)aPath;
 
+/** Create pool using path.
+ 
+ @param aPath The file path of the database.
+ @param openFlags Flags passed to the openWithFlags method of the database.
+ @param vfsName The name of a custom virtual file system
+
+ @return The `QIMDatabasePool` object. `nil` on error.
+ */
++ (instancetype)databasePoolWithPath:(NSString *)aPath flags:(int)openFlags vfs:(NSString *)vfsName;
+
 /** Create pool using file URL.
  
  @param url The file `NSURL` of the database.

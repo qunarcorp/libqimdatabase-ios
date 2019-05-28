@@ -216,6 +216,8 @@ NS_ASSUME_NONNULL_END
         NSLog(@"error opening!: %d", err);
         return NO;
     }
+    sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
+    sqlite3_exec(_db, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
     
     if (_maxBusyRetryTimeInterval > 0.0) {
         // set the handler

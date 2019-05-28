@@ -44,6 +44,10 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     return QIMDBReturnAutoreleased([[self alloc] initWithPath:aPath]);
 }
 
++ (instancetype)databasePoolWithPath:(NSString *)aPath flags:(int)openFlags vfs:(NSString *)vfsName{
+    return QIMDBReturnAutoreleased([[self alloc] initWithPath:aPath flags:openFlags vfs:vfsName]);
+}
+
 + (instancetype)databasePoolWithURL:(NSURL *)url {
     return QIMDBReturnAutoreleased([[self alloc] initWithPath:url.path]);
 }
