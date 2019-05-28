@@ -20,32 +20,8 @@
 @class Database;
 @class DatabaseOperator;
 
-@protocol QSDatabaseProtocol <NSObject>
-
-@required
-- (void) setDbOperator:(DatabaseOperator*) op;
-- (BOOL) createDb:(Database *) database;
-- (BOOL) updateDbFromOldVersion:(long long) oldVersion
-                   toNewVersion:(long long) newVersion
-                  usingDatabase:(Database*) database;
-@optional
-- (void) afterDbCreation:(Database*) database;
-
-@end
-
-@interface SQLiteStatement : NSObject {
-    void     *_object;
-    Database *_database;
-}
-
-- (void) bindParameter:(int) pos withValue:(id) value;
-- (BOOL) execute;
-
-@end
-
-
 @interface DataReader : NSObject {
-    
+
     void        *_object;
     Database    *_database;
 }
@@ -84,6 +60,8 @@ typedef void(^DatabaseFunction)(Database *database);
 @interface DatabaseOperator : NSObject {
     Database *_database;
 }
+
+@property (nonatomic, strong) Database *database;
 
 - (id)initWithDatabase:(Database *) database;
 - (void) usingTransaction:(DatabaseFunction) transaction;

@@ -8,56 +8,20 @@
 
 #import "Database.h"
 
-#ifndef SINGLETON_INST
-#define SINGLETON_INST(YourClass)   + (YourClass *)sharedInstance \
-{ \
-static YourClass *sharedInstance = nil; \
-static dispatch_once_t onceToken; \
-dispatch_once(&onceToken, ^{ \
-sharedInstance = [[YourClass alloc] init]; \
-}); \
-return sharedInstance; \
-}
-#endif
-
-
 #define DatabaseAssert( _exp_ ) if ( !_exp_ ) [NSException raise:@"NSDatabaseException" format:@""];
-
-#define DatabaseAssertWithError( _exp_, arg ) if ( !_exp_ ) [NSException raise:@"NSDatabaseException" format:@"[DATABASE ERROR] \r\n%@", arg];
-#define DatabaseAssertWithErrorAndDB( _exp_, arg, database ) if ( !_exp_ ) [NSException raise:@"NSDatabaseException" format:@"[DATABASE ERROR] \r\n%@\r\n%@", arg, sqlite3_errmsg(_database)];
-
-static void add_some_sql_log(NSString *sql);
-
-#ifdef DEBUG
-#   define ADD_LOG(e) add_some_sql_log(e)
-NSMutableDictionary *__global__sql_dic__ = nil;
-
-static void add_some_sql_log(NSString *sql) {
-    return;
-    if (__global__sql_dic__ == nil)
-        __global__sql_dic__ = [[NSMutableDictionary alloc] initWithCapacity:10];
-    NSNumber *number = [__global__sql_dic__ objectForKey:sql];
-    if (number) {
-        number = [NSNumber numberWithLongLong:([number longLongValue] + 1)];
-    } else {
-        number = [NSNumber numberWithLongLong:0];
-    }
-    [__global__sql_dic__ setObject:number forKey:sql];
-}
-
-#else
-#   define ADD_LOG(e) /**/
-#endif
 
 #pragma mark - DataReader method
 
 @interface DataReader(Private)
-- (id) initWithStmt:(sqlite3_stmt*)stmt withDatabase:(Database*) db;
-- (void) dealloc;
+
+- (id)initWithStmt:(sqlite3_stmt*)stmt withDatabase:(Database*) db;
+- (void)dealloc;
+
 @end
 
 
 @implementation DataReader(Private)
+
 - (void)dealloc {
     
     sqlite3_stmt *stmt = (sqlite3_stmt*)_object;
@@ -75,20 +39,8 @@ static void add_some_sql_log(NSString *sql) {
     }
     return self;
 }
-@end
-
-
-@implementation SQLiteStatement
-
-- (void)bindParameter:(int)pos withValue:(id)value {
-}
-
-- (BOOL)execute {
-    return NO;
-}
 
 @end
-
 
 @implementation DataReader
 
@@ -243,7 +195,6 @@ static void add_some_sql_log(NSString *sql) {
         _database = nil;
         _path = nil;
         sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
-        sqlite3_config(SQLITE_CONFIG_MEMSTATUS, false);
     }
     return self;
 }
@@ -333,7 +284,7 @@ static void add_some_sql_log(NSString *sql) {
     if (version.doubleValue >= 11.0) {
         
         int rc = 0;
-        rc = sqlite3_open_v2([filePath UTF8String], (sqlite3**)&_database, SQLITE_OPEN_READWRITE|SQLITE_OPEN_FULLMUTEX|SQLITE_OPEN_CREATE, NULL);
+        rc = sqlite3_open_v2([filePath UTF8String], (sqlite3**)&_database, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE, NULL);
         sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
         sqlite3_exec(_database, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
 //        sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
@@ -358,8 +309,7 @@ static void add_some_sql_log(NSString *sql) {
     return rc == SQLITE_OK;
 }
 
-- (void) execCommand:(NSString *) command {
-    ADD_LOG(command);
+- (void)execCommand:(NSString *)command {
     if (command == nil || [command length] <= 0) {
         NSLog(@"execCommand and sqlName is nil");
     } else {
@@ -394,9 +344,7 @@ static void add_some_sql_log(NSString *sql) {
 
 - (DataReader *)executeReader:(NSString *)sqlName
                withParameters:(NSArray *)params {
-    
-    ADD_LOG(sqlName);
-    
+        
     if (sqlName == nil || [sqlName length] <= 0) {
         NSLog(@"executeReader and sqlName is nil");
         return nil;
@@ -459,7 +407,6 @@ static void add_some_sql_log(NSString *sql) {
 
 
 - (BOOL) executeBulkInsert:(NSString *)sqlName withParameters:(NSArray*) params {
-    ADD_LOG(sqlName);
     BOOL succeeded = NO;
     if (sqlName == nil || [sqlName length] <= 0) {
         NSLog(@"executeNonQuery and sqlName is nil");
@@ -511,7 +458,6 @@ static void add_some_sql_log(NSString *sql) {
 }
 
 - (BOOL) executeNonQuery:(NSString *)sqlName withParameters:(NSArray*) params {
-    ADD_LOG(sqlName);
     BOOL succeeded = NO;
     if (sqlName == nil || [sqlName length] <= 0) {
         NSLog(@"executeNonQuery and sqlName is nil");
@@ -706,7 +652,7 @@ static void add_some_sql_log(NSString *sql) {
         __block BOOL succeeded = NO;
         NSString *version = [UIDevice currentDevice].systemVersion;
         if (version.doubleValue >= 11.0) {
-            sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
+            sqlite3_exec([_database dbInstance], "begin immediate transaction", NULL, NULL, NULL);
             @try {
                 NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
                 privateCallback(_database);
@@ -753,7 +699,7 @@ static void add_some_sql_log(NSString *sql) {
     if (version.doubleValue >= 11.0) {
         if (transaction) {
             DatabaseFunction privateCallback  = [transaction copy];
-            sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
+            sqlite3_exec([_database dbInstance], "begin immediate transaction", NULL, NULL, NULL);
             @try {
                 @autoreleasepool {
                     privateCallback(_database);
@@ -793,7 +739,7 @@ static void add_some_sql_log(NSString *sql) {
         dispatch_block_t privateEnd         = [end copy];
         NSString *version = [UIDevice currentDevice].systemVersion;
         if (version.doubleValue >= 11.0) {
-            sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
+            sqlite3_exec([_database dbInstance], "begin immediate transaction", NULL, NULL, NULL);
         } else {
             sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
         }
@@ -944,7 +890,14 @@ static void add_some_sql_log(NSString *sql) {
 
 @implementation DatabaseManager
 
-SINGLETON_INST(DatabaseManager);
+static DatabaseManager *_dbmanager = nil;
++ (instancetype)sharedInstance {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _dbmanager = [[DatabaseManager alloc] init];
+    });
+    return _dbmanager;
+}
 
 + (BOOL)OpenByFullPath:(NSString *)dbFilePath {
     return [[DatabaseManager sharedInstance] OpenByFullPath:dbFilePath];
