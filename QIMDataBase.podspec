@@ -18,6 +18,6 @@ Pod::Spec.new do |s|
   s.ios.deployment_target   = '9.0'
 
   s.source_files = 'QIMDataBase/**/*.{h,m,c}'
-  s.requires_arc = false
-  
+#  s.requires_arc = false
+
 end

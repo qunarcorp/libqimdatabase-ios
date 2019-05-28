@@ -5,7 +5,7 @@
 //  Created by lilu on 2019/5/28.
 //
 
-#if FMDB_SQLITE_STANDALONE
+#if QIMDB_SQLITE_STANDALONE
 #import <sqlite3/sqlite3.h>
 #else
 #import <sqlite3.h>
@@ -86,7 +86,7 @@ static QIMDataBaseQueueManager *_dbQueueManager = nil;
     [self executeLocked:^() {
         
         if ([self.databaseInPool containsObject:db]) {
-            [[NSException exceptionWithName:@"Database already in pool" reason:@"The FMDatabase being put back into the pool is already present in the pool" userInfo:nil] raise];
+            [[NSException exceptionWithName:@"Database already in pool" reason:@"The QIMDatabase being put back into the pool is already present in the pool" userInfo:nil] raise];
         }
         
         [self.databaseInPool addObject:db];
