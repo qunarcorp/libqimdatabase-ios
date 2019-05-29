@@ -1,4 +1,4 @@
-#import "QIMDatabase.h"
+#import "QIMDataBase.h"
 #import <unistd.h>
 #import <objc/runtime.h>
 
@@ -21,7 +21,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-- (QIMResultSet * _Nullable)executeQuery:(NSString *)sql withArgumentsInArray:(NSArray * _Nullable)arrayArgs orDictionary:(NSDictionary * _Nullable)dictionaryArgs orVAList:(va_list)args;
+- (DataReader * _Nullable)executeQuery:(NSString *)sql withArgumentsInArray:(NSArray * _Nullable)arrayArgs orDictionary:(NSDictionary * _Nullable)dictionaryArgs orVAList:(va_list)args;
 - (BOOL)executeUpdate:(NSString *)sql error:(NSError * _Nullable __autoreleasing *)outErr withArgumentsInArray:(NSArray * _Nullable)arrayArgs orDictionary:(NSDictionary * _Nullable)dictionaryArgs orVAList:(va_list)args;
 
 NS_ASSUME_NONNULL_END
@@ -174,7 +174,7 @@ NS_ASSUME_NONNULL_END
     // now open database
     
     //    int err = sqlite3_open([self sqlitePath], (sqlite3**)&_db );
-    int err = sqlite3_open_v2([self sqlitePath], (sqlite3**)&_db, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE, NULL);
+    int err = sqlite3_open_v2([self sqlitePath], (sqlite3**)&_db, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX, NULL);
     sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
     sqlite3_exec(_db, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
     
@@ -354,7 +354,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     //Copy the set so we don't get mutation errors
     NSSet *openSetCopy = QIMDBReturnAutoreleased([_openResultSets copy]);
     for (NSValue *rsInWrappedInATastyValueMeal in openSetCopy) {
-        QIMResultSet *rs = (QIMResultSet *)[rsInWrappedInATastyValueMeal pointerValue];
+        DataReader *rs = (DataReader *)[rsInWrappedInATastyValueMeal pointerValue];
         
         [rs setParentDB:nil];
         [rs close];
@@ -363,7 +363,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     }
 }
 
-- (void)resultSetDidClose:(QIMResultSet *)resultSet {
+- (void)resultSetDidClose:(DataReader *)resultSet {
     NSValue *setValue = [NSValue valueWithNonretainedObject:resultSet];
     
     [_openResultSets removeObject:setValue];
@@ -374,7 +374,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
 - (void)clearCachedStatements {
     
     for (NSMutableSet *statements in [_cachedStatements objectEnumerator]) {
-        for (FMStatement *statement in [statements allObjects]) {
+        for (QIMDBStatement *statement in [statements allObjects]) {
             [statement close];
         }
     }
@@ -382,11 +382,11 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     [_cachedStatements removeAllObjects];
 }
 
-- (FMStatement*)cachedStatementForQuery:(NSString*)query {
+- (QIMDBStatement*)cachedStatementForQuery:(NSString*)query {
     
     NSMutableSet* statements = [_cachedStatements objectForKey:query];
     
-    return [[statements objectsPassingTest:^BOOL(FMStatement* statement, BOOL *stop) {
+    return [[statements objectsPassingTest:^BOOL(QIMDBStatement* statement, BOOL *stop) {
         
         *stop = ![statement inUse];
         return *stop;
@@ -395,7 +395,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
 }
 
 
-- (void)setCachedStatement:(FMStatement*)statement forQuery:(NSString*)query {
+- (void)setCachedStatement:(QIMDBStatement*)statement forQuery:(NSString*)query {
     NSParameterAssert(query);
     if (!query) {
         NSLog(@"API misuse, -[QIMDatabase setCachedStatement:forQuery:] query must not be nil");
@@ -503,7 +503,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
         return NO;
     }
     
-    QIMResultSet *rs = [self executeQuery:@"select name from sqlite_master where type='table'"];
+    DataReader *rs = [self executeQuery:@"select name from sqlite_master where type='table'"];
     
     if (rs) {
         [rs close];
@@ -802,11 +802,11 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
 
 #pragma mark Execute queries
 
-- (QIMResultSet *)executeQuery:(NSString *)sql withParameterDictionary:(NSDictionary *)arguments {
+- (DataReader *)executeQuery:(NSString *)sql withParameterDictionary:(NSDictionary *)arguments {
     return [self executeQuery:sql withArgumentsInArray:nil orDictionary:arguments orVAList:nil];
 }
 
-- (QIMResultSet *)executeQuery:(NSString *)sql withArgumentsInArray:(NSArray*)arrayArgs orDictionary:(NSDictionary *)dictionaryArgs orVAList:(va_list)args {
+- (DataReader *)executeQuery:(NSString *)sql withArgumentsInArray:(NSArray*)arrayArgs orDictionary:(NSDictionary *)dictionaryArgs orVAList:(va_list)args {
     
     if (![self databaseExists]) {
         return 0x00;
@@ -821,8 +821,8 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     
     int rc                  = 0x00;
     sqlite3_stmt *pStmt     = 0x00;
-    FMStatement *statement  = 0x00;
-    QIMResultSet *rs         = 0x00;
+    QIMDBStatement *statement  = 0x00;
+    DataReader *rs         = 0x00;
     
     if (_traceExecution && sql) {
         NSLog(@"%@ executeQuery: %@", self, sql);
@@ -928,7 +928,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     QIMDBRetain(statement); // to balance the release below
     
     if (!statement) {
-        statement = [[FMStatement alloc] init];
+        statement = [[QIMDBStatement alloc] init];
         [statement setStatement:pStmt];
         
         if (_shouldCacheStatements && sql) {
@@ -937,7 +937,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     }
     
     // the statement gets closed in rs's dealloc or [rs close];
-    rs = [QIMResultSet resultSetWithStatement:statement usingParentDatabase:self];
+    rs = [DataReader resultSetWithStatement:statement usingParentDatabase:self];
     [rs setQuery:sql];
     
     NSValue *openResultSet = [NSValue valueWithNonretainedObject:rs];
@@ -952,7 +952,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     return rs;
 }
 
-- (QIMResultSet *)executeQuery:(NSString*)sql, ... {
+- (DataReader *)executeQuery:(NSString*)sql, ... {
     va_list args;
     va_start(args, sql);
     
@@ -962,7 +962,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     return result;
 }
 
-- (QIMResultSet *)executeQueryWithFormat:(NSString*)format, ... {
+- (DataReader *)executeQueryWithFormat:(NSString*)format, ... {
     va_list args;
     va_start(args, format);
     
@@ -972,22 +972,36 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     
     va_end(args);
     
-    return [self executeQuery:sql withArgumentsInArray:arguments];
+    return [self executeReader:sql withParameters:arguments];
 }
 
-- (QIMResultSet *)executeQuery:(NSString *)sql withArgumentsInArray:(NSArray *)arguments {
+- (DataReader * _Nullable)executeReader:(NSString *)sql withParameters:(NSArray *)arguments {
     return [self executeQuery:sql withArgumentsInArray:arguments orDictionary:nil orVAList:nil];
 }
 
-- (QIMResultSet *)executeQuery:(NSString *)sql values:(NSArray *)values error:(NSError * __autoreleasing *)error {
-    QIMResultSet *rs = [self executeQuery:sql withArgumentsInArray:values orDictionary:nil orVAList:nil];
+- (DataReader *)executeQuery:(NSString *)sql values:(NSArray *)values error:(NSError * __autoreleasing *)error {
+    DataReader *rs = [self executeQuery:sql withArgumentsInArray:values orDictionary:nil orVAList:nil];
     if (!rs && error) {
         *error = [self lastError];
     }
     return rs;
 }
 
-- (QIMResultSet *)executeQuery:(NSString*)sql withVAList:(va_list)args {
+- (BOOL)executeNonQuery:(NSString *)sql withParameters:(NSArray *)arguments {
+    
+    return [self executeUpdate:sql error:nil withArgumentsInArray:arguments orDictionary:nil orVAList:nil];
+}
+
+- (BOOL)executeBulkInsert:(NSString *)sql withParameters:(NSArray *)arguments {
+    BOOL result = NO;
+    for (NSInteger i = 0; i < arguments.count; i++) {
+        NSArray *array = [arguments objectAtIndex:i];
+        [self executeUpdate:sql error:nil withArgumentsInArray:array orDictionary:nil orVAList:nil];
+    }
+    return result;
+}
+
+- (DataReader *)executeQuery:(NSString*)sql withVAList:(va_list)args {
     return [self executeQuery:sql withArgumentsInArray:nil orDictionary:nil orVAList:args];
 }
 
@@ -1008,7 +1022,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     
     int rc                   = 0x00;
     sqlite3_stmt *pStmt      = 0x00;
-    FMStatement *cachedStmt  = 0x00;
+    QIMDBStatement *cachedStmt  = 0x00;
     
     if (_traceExecution && sql) {
         NSLog(@"%@ executeUpdate: %@", self, sql);
@@ -1183,7 +1197,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     }
     
     if (_shouldCacheStatements && !cachedStmt) {
-        cachedStmt = [[FMStatement alloc] init];
+        cachedStmt = [[QIMDBStatement alloc] init];
         
         [cachedStmt setStatement:pStmt];
         
@@ -1641,7 +1655,7 @@ void QIMDBBlockSQLiteCallBackFunction(sqlite3_context *context, int argc, sqlite
 
 
 
-@implementation FMStatement
+@implementation QIMDBStatement
 
 #if ! __has_feature(objc_arc)
 - (void)finalize {

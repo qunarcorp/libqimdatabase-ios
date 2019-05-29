@@ -75,6 +75,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
         _databaseOutPool    = QIMDBReturnRetained([NSMutableArray array]);
         _openFlags          = openFlags;
         _vfsName            = [vfsName copy];
+        _maximumNumberOfDatabasesToCreate = 4;
     }
     
     return self;
@@ -90,7 +91,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
 
 - (instancetype)initWithPath:(NSString*)aPath {
     // default flags for sqlite3_open
-    return [self initWithPath:aPath flags:SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE];
+    return [self initWithPath:aPath flags:SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX];
 }
 
 - (instancetype)initWithURL:(NSURL *)url {
@@ -296,7 +297,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     [self beginTransaction:QIMDBTransactionExclusive withBlock:block];
 }
 
-- (void)inImmediateTransaction:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block {
+- (void)syncUsingTransaction:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block {
     [self beginTransaction:QIMDBTransactionImmediate withBlock:block];
 }
 

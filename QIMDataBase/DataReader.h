@@ -15,7 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 #endif
 
 @class QIMDatabase;
-@class FMStatement;
+@class QIMDBStatement;
 
 /** Represents the results of executing a query on an `<QIMDatabase>`.
  
@@ -24,7 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
  - `<QIMDatabase>`
  */
 
-@interface QIMResultSet : NSObject
+@interface DataReader : NSObject
 
 @property (nonatomic, retain, nullable) QIMDatabase *parentDB;
 
@@ -40,24 +40,24 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (readonly) NSMutableDictionary *columnNameToIndexMap;
 
-/** `FMStatement` used by result set. */
+/** `QIMDBStatement` used by result set. */
 
-@property (atomic, retain, nullable) FMStatement *statement;
+@property (atomic, retain, nullable) QIMDBStatement *statement;
 
 ///------------------------------------
 /// @name Creating and closing a result set
 ///------------------------------------
 
-/** Create result set from `<FMStatement>`
+/** Create result set from `<QIMDBStatement>`
  
- @param statement A `<FMStatement>` to be performed
+ @param statement A `<QIMDBStatement>` to be performed
  
  @param aDB A `<QIMDatabase>` to be used
  
- @return A `QIMResultSet` on success; `nil` on failure
+ @return A `DataReader` on success; `nil` on failure
  */
 
-+ (instancetype)resultSetWithStatement:(FMStatement *)statement usingParentDatabase:(QIMDatabase*)aDB;
++ (instancetype)resultSetWithStatement:(QIMDBStatement *)statement usingParentDatabase:(QIMDatabase*)aDB;
 
 /** Close result set */
 
@@ -76,7 +76,7 @@ NS_ASSUME_NONNULL_BEGIN
  @see hasAnotherRow
  */
 
-- (BOOL)next;
+- (BOOL)read;
 
 /** Retrieve next row for result set.
  

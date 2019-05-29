@@ -1,4 +1,4 @@
-#import "QIMResultSet.h"
+#import "DataReader.h"
 #import "QIMDatabase.h"
 #import <unistd.h>
 
@@ -9,19 +9,19 @@
 #endif
 
 @interface QIMDatabase ()
-- (void)resultSetDidClose:(QIMResultSet *)resultSet;
+- (void)resultSetDidClose:(DataReader *)resultSet;
 @end
 
-@interface QIMResultSet () {
+@interface DataReader () {
     NSMutableDictionary *_columnNameToIndexMap;
 }
 @end
 
-@implementation QIMResultSet
+@implementation DataReader
 
-+ (instancetype)resultSetWithStatement:(FMStatement *)statement usingParentDatabase:(QIMDatabase*)aDB {
++ (instancetype)resultSetWithStatement:(QIMDBStatement *)statement usingParentDatabase:(QIMDatabase*)aDB {
     
-    QIMResultSet *rs = [[QIMResultSet alloc] init];
+    DataReader *rs = [[DataReader alloc] init];
     
     [rs setStatement:statement];
     [rs setParentDB:aDB];
@@ -156,7 +156,7 @@
 
 
 
-- (BOOL)next {
+- (BOOL)read {
     return [self nextWithError:nil];
 }
 

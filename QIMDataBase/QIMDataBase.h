@@ -1,5 +1,5 @@
 #import <Foundation/Foundation.h>
-#import "QIMResultSet.h"
+#import "DataReader.h"
 #import "QIMDatabasePool.h"
 
 NS_ASSUME_NONNULL_BEGIN
@@ -54,13 +54,13 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  The three main classes in QIMDB are:
  
  - `QIMDatabase` - Represents a single SQLite database.  Used for executing SQL statements.
- - `<QIMResultSet>` - Represents the results of executing a query on an `QIMDatabase`.
+ - `<DataReader>` - Represents the results of executing a query on an `QIMDatabase`.
  - `<QIMDatabaseQueue>` - If you want to perform queries and updates on multiple threads, you'll want to use this class.
  
  ### See also
  
  - `<QIMDatabasePool>` - A pool of `QIMDatabase` objects.
- - `<FMStatement>` - A wrapper for `sqlite_stmt`.
+ - `<QIMDBStatement>` - A wrapper for `sqlite_stmt`.
  
  ### External links
  
@@ -556,9 +556,9 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
 
 /** Execute select statement
  
- Executing queries returns an `<QIMResultSet>` object if successful, and `nil` upon failure.  Like executing updates, there is a variant that accepts an `NSError **` parameter.  Otherwise you should use the `<lastErrorMessage>` and `<lastErrorMessage>` methods to determine why a query failed.
+ Executing queries returns an `<DataReader>` object if successful, and `nil` upon failure.  Like executing updates, there is a variant that accepts an `NSError **` parameter.  Otherwise you should use the `<lastErrorMessage>` and `<lastErrorMessage>` methods to determine why a query failed.
  
- In order to iterate through the results of your query, you use a `while()` loop.  You also need to "step" (via `<[QIMResultSet next]>`) from one record to the other.
+ In order to iterate through the results of your query, you use a `while()` loop.  You also need to "step" (via `<[DataReader next]>`) from one record to the other.
  
  This method employs [`sqlite3_bind`](http://sqlite.org/c3ref/bind_blob.html) for any optional value parameters. This  properly escapes any characters that need escape sequences (e.g. quotation marks), which eliminates simple SQL errors as well as protects against SQL injection attacks. This method natively handles `NSString`, `NSNumber`, `NSNull`, `NSDate`, and `NSData` objects. All other object types will be interpreted as text values using the object's `description` method.
  
@@ -566,32 +566,32 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  @param ... Optional parameters to bind to `?` placeholders in the SQL statement. These should be Objective-C objects (e.g. `NSString`, `NSNumber`, etc.), not fundamental C data types (e.g. `int`, `char *`, etc.).
  
- @return A `<QIMResultSet>` for the result set upon success; `nil` upon failure. If failed, you can call `<lastError>`, `<lastErrorCode>`, or `<lastErrorMessage>` for diagnostic information regarding the failure.
+ @return A `<DataReader>` for the result set upon success; `nil` upon failure. If failed, you can call `<lastError>`, `<lastErrorCode>`, or `<lastErrorMessage>` for diagnostic information regarding the failure.
  
- @see QIMResultSet
- @see [`QIMResultSet next`](<[QIMResultSet next]>)
+ @see DataReader
+ @see [`DataReader next`](<[DataReader next]>)
  @see [`sqlite3_bind`](http://sqlite.org/c3ref/bind_blob.html)
  
  @note You cannot use this method from Swift due to incompatibilities between Swift and Objective-C variadic implementations. Consider using `<executeQuery:values:>` instead.
  */
 
-- (QIMResultSet * _Nullable)executeQuery:(NSString*)sql, ...;
+- (DataReader * _Nullable)executeQuery:(NSString*)sql, ...;
 
 /** Execute select statement
  
- Executing queries returns an `<QIMResultSet>` object if successful, and `nil` upon failure.  Like executing updates, there is a variant that accepts an `NSError **` parameter.  Otherwise you should use the `<lastErrorMessage>` and `<lastErrorMessage>` methods to determine why a query failed.
+ Executing queries returns an `<DataReader>` object if successful, and `nil` upon failure.  Like executing updates, there is a variant that accepts an `NSError **` parameter.  Otherwise you should use the `<lastErrorMessage>` and `<lastErrorMessage>` methods to determine why a query failed.
  
- In order to iterate through the results of your query, you use a `while()` loop.  You also need to "step" (via `<[QIMResultSet next]>`) from one record to the other.
+ In order to iterate through the results of your query, you use a `while()` loop.  You also need to "step" (via `<[DataReader next]>`) from one record to the other.
  
  @param format The SQL to be performed, with `printf`-style escape sequences.
  
  @param ... Optional parameters to bind to use in conjunction with the `printf`-style escape sequences in the SQL statement.
  
- @return A `<QIMResultSet>` for the result set upon success; `nil` upon failure. If failed, you can call `<lastError>`, `<lastErrorCode>`, or `<lastErrorMessage>` for diagnostic information regarding the failure.
+ @return A `<DataReader>` for the result set upon success; `nil` upon failure. If failed, you can call `<lastError>`, `<lastErrorCode>`, or `<lastErrorMessage>` for diagnostic information regarding the failure.
  
  @see executeQuery:
- @see QIMResultSet
- @see [`QIMResultSet next`](<[QIMResultSet next]>)
+ @see DataReader
+ @see [`DataReader next`](<[DataReader next]>)
  
  @note This method does not technically perform a traditional printf-style replacement. What this method actually does is replace the printf-style percent sequences with a SQLite `?` placeholder, and then bind values to that placeholder. Thus the following command
  
@@ -605,38 +605,38 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-- (QIMResultSet * _Nullable)executeQueryWithFormat:(NSString*)format, ... NS_FORMAT_FUNCTION(1,2);
+- (DataReader * _Nullable)executeQueryWithFormat:(NSString*)format, ... NS_FORMAT_FUNCTION(1,2);
 
 /** Execute select statement
  
- Executing queries returns an `<QIMResultSet>` object if successful, and `nil` upon failure.  Like executing updates, there is a variant that accepts an `NSError **` parameter.  Otherwise you should use the `<lastErrorMessage>` and `<lastErrorMessage>` methods to determine why a query failed.
+ Executing queries returns an `<DataReader>` object if successful, and `nil` upon failure.  Like executing updates, there is a variant that accepts an `NSError **` parameter.  Otherwise you should use the `<lastErrorMessage>` and `<lastErrorMessage>` methods to determine why a query failed.
  
- In order to iterate through the results of your query, you use a `while()` loop.  You also need to "step" (via `<[QIMResultSet next]>`) from one record to the other.
+ In order to iterate through the results of your query, you use a `while()` loop.  You also need to "step" (via `<[DataReader next]>`) from one record to the other.
  
  @param sql The SELECT statement to be performed, with optional `?` placeholders.
  
  @param arguments A `NSArray` of objects to be used when binding values to the `?` placeholders in the SQL statement.
  
- @return A `<QIMResultSet>` for the result set upon success; `nil` upon failure. If failed, you can call `<lastError>`, `<lastErrorCode>`, or `<lastErrorMessage>` for diagnostic information regarding the failure.
+ @return A `<DataReader>` for the result set upon success; `nil` upon failure. If failed, you can call `<lastError>`, `<lastErrorCode>`, or `<lastErrorMessage>` for diagnostic information regarding the failure.
  
  @see -executeQuery:values:error:
- @see QIMResultSet
- @see [`QIMResultSet next`](<[QIMResultSet next]>)
+ @see DataReader
+ @see [`DataReader next`](<[DataReader next]>)
  */
 
-- (QIMResultSet * _Nullable)executeQuery:(NSString *)sql withArgumentsInArray:(NSArray *)arguments;
+- (DataReader * _Nullable)executeReader:(NSString *)sql withParameters:(NSArray *)arguments;
 
 /** Execute select statement
  
- Executing queries returns an `<QIMResultSet>` object if successful, and `nil` upon failure.  Like executing updates, there is a variant that accepts an `NSError **` parameter.  Otherwise you should use the `<lastErrorMessage>` and `<lastErrorMessage>` methods to determine why a query failed.
+ Executing queries returns an `<DataReader>` object if successful, and `nil` upon failure.  Like executing updates, there is a variant that accepts an `NSError **` parameter.  Otherwise you should use the `<lastErrorMessage>` and `<lastErrorMessage>` methods to determine why a query failed.
  
- In order to iterate through the results of your query, you use a `while()` loop.  You also need to "step" (via `<[QIMResultSet next]>`) from one record to the other.
+ In order to iterate through the results of your query, you use a `while()` loop.  You also need to "step" (via `<[DataReader next]>`) from one record to the other.
  
  This is similar to `<executeQuery:withArgumentsInArray:>`, except that this also accepts a pointer to a `NSError` pointer, so that errors can be returned.
  
  In Swift, this throws errors, as if it were defined as follows:
  
- `func executeQuery(sql: String, values: [Any]?) throws  -> QIMResultSet!`
+ `func executeQuery(sql: String, values: [Any]?) throws  -> DataReader!`
  
  @param sql The SELECT statement to be performed, with optional `?` placeholders.
  
@@ -644,38 +644,42 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  @param error A `NSError` object to receive any error object (if any).
  
- @return A `<QIMResultSet>` for the result set upon success; `nil` upon failure. If failed, you can call `<lastError>`, `<lastErrorCode>`, or `<lastErrorMessage>` for diagnostic information regarding the failure.
+ @return A `<DataReader>` for the result set upon success; `nil` upon failure. If failed, you can call `<lastError>`, `<lastErrorCode>`, or `<lastErrorMessage>` for diagnostic information regarding the failure.
  
- @see QIMResultSet
- @see [`QIMResultSet next`](<[QIMResultSet next]>)
+ @see DataReader
+ @see [`DataReader next`](<[DataReader next]>)
  
  @note When called from Swift, only use the first two parameters, `sql` and `values`. This but throws the error.
  
  */
 
-- (QIMResultSet * _Nullable)executeQuery:(NSString *)sql values:(NSArray * _Nullable)values error:(NSError * _Nullable __autoreleasing *)error;
+- (DataReader * _Nullable)executeQuery:(NSString *)sql values:(NSArray * _Nullable)values error:(NSError * _Nullable __autoreleasing *)error;
 
 /** Execute select statement
  
- Executing queries returns an `<QIMResultSet>` object if successful, and `nil` upon failure.  Like executing updates, there is a variant that accepts an `NSError **` parameter.  Otherwise you should use the `<lastErrorMessage>` and `<lastErrorMessage>` methods to determine why a query failed.
+ Executing queries returns an `<DataReader>` object if successful, and `nil` upon failure.  Like executing updates, there is a variant that accepts an `NSError **` parameter.  Otherwise you should use the `<lastErrorMessage>` and `<lastErrorMessage>` methods to determine why a query failed.
  
- In order to iterate through the results of your query, you use a `while()` loop.  You also need to "step" (via `<[QIMResultSet next]>`) from one record to the other.
+ In order to iterate through the results of your query, you use a `while()` loop.  You also need to "step" (via `<[DataReader next]>`) from one record to the other.
  
  @param sql The SELECT statement to be performed, with optional `?` placeholders.
  
  @param arguments A `NSDictionary` of objects keyed by column names that will be used when binding values to the `?` placeholders in the SQL statement.
  
- @return A `<QIMResultSet>` for the result set upon success; `nil` upon failure. If failed, you can call `<lastError>`, `<lastErrorCode>`, or `<lastErrorMessage>` for diagnostic information regarding the failure.
+ @return A `<DataReader>` for the result set upon success; `nil` upon failure. If failed, you can call `<lastError>`, `<lastErrorCode>`, or `<lastErrorMessage>` for diagnostic information regarding the failure.
  
- @see QIMResultSet
- @see [`QIMResultSet next`](<[QIMResultSet next]>)
+ @see DataReader
+ @see [`DataReader next`](<[DataReader next]>)
  */
 
-- (QIMResultSet * _Nullable)executeQuery:(NSString *)sql withParameterDictionary:(NSDictionary * _Nullable)arguments;
+- (DataReader * _Nullable)executeQuery:(NSString *)sql withParameterDictionary:(NSDictionary * _Nullable)arguments;
 
+
+- (BOOL)executeNonQuery:(NSString *)sql withParameters:(NSArray *)arguments;
+
+- (BOOL)executeBulkInsert:(NSString *)sql withParameters:(NSArray *)params;
 
 // Documentation forthcoming.
-- (QIMResultSet * _Nullable)executeQuery:(NSString *)sql withVAList:(va_list)args;
+- (DataReader * _Nullable)executeQuery:(NSString *)sql withVAList:(va_list)args;
 
 ///-------------------
 /// @name Transactions
@@ -1114,7 +1118,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  [self.db resultString:result context:context];
  }];
  
- QIMResultSet *rs = [db executeQuery:@"SELECT * FROM employees WHERE RemoveDiacritics(first_name) LIKE 'jose'"];
+ DataReader *rs = [db executeQuery:@"SELECT * FROM employees WHERE RemoveDiacritics(first_name) LIKE 'jose'"];
  NSAssert(rs, @"Error %@", [db lastErrorMessage]);
  
  @param name Name of function.
@@ -1378,16 +1382,16 @@ typedef NS_ENUM(int, SqliteValueType) {
 
 /** Objective-C wrapper for `sqlite3_stmt`
  
- This is a wrapper for a SQLite `sqlite3_stmt`. Generally when using QIMDB you will not need to interact directly with `FMStatement`, but rather with `<QIMDatabase>` and `<QIMResultSet>` only.
+ This is a wrapper for a SQLite `sqlite3_stmt`. Generally when using QIMDB you will not need to interact directly with `QIMDBStatement`, but rather with `<QIMDatabase>` and `<DataReader>` only.
  
  ### See also
  
  - `<QIMDatabase>`
- - `<QIMResultSet>`
+ - `<DataReader>`
  - [`sqlite3_stmt`](http://www.sqlite.org/c3ref/stmt.html)
  */
 
-@interface FMStatement : NSObject {
+@interface QIMDBStatement : NSObject {
     void *_statement;
     NSString *_query;
     long _useCount;

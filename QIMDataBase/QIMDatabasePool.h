@@ -241,7 +241,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param block The code to be run on the queue of `QIMDatabaseQueue`
  */
 
-- (void)inImmediateTransaction:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block;
+- (void)syncUsingTransaction:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block;
 
 /** Synchronously perform database operations in pool using save point.
  
