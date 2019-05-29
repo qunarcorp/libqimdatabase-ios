@@ -332,6 +332,7 @@ static void add_some_sql_log(NSString *sql) {
         _runningQueue = dispatch_queue_create("sqlite3_queue", nil);
     }
     
+<<<<<<< HEAD
     __block int rc = 0;
     dispatch_sync(_runningQueue, ^{
         rc = sqlite3_open([filePath UTF8String], (sqlite3**)&_database);
@@ -343,6 +344,35 @@ static void add_some_sql_log(NSString *sql) {
     });
     
     return rc == SQLITE_OK;
+=======
+    if (usingCurrentThread)
+        _runningQueue = dispatch_get_current_queue();
+    else {
+        _runningQueue = dispatch_queue_create("sqlite3_queue", nil);
+    }
+    NSString *version = [UIDevice currentDevice].systemVersion;
+    if (version.doubleValue >= 11.0) {
+        
+        int rc = 0;
+        rc = sqlite3_open_v2([filePath UTF8String], (sqlite3**)&_database, SQLITE_OPEN_READWRITE|SQLITE_OPEN_FULLMUTEX|SQLITE_OPEN_CREATE, NULL);
+        sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
+        sqlite3_exec(_database, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
+//        sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
+        
+        return rc == SQLITE_OK;
+    } else {
+        
+        __block int rc = 0;
+        dispatch_sync(_runningQueue, ^{
+            rc = sqlite3_open([filePath UTF8String], (sqlite3**)&_database);
+            sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
+            sqlite3_exec(_database, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
+//            sqlite3_exec(_database, [@"PRAGMA synchronous = OFF;" UTF8String], NULL, NULL, NULL);
+        });
+        
+        return rc == SQLITE_OK;
+    }
+>>>>>>> 00d812757e2752eeab766830398de1a1a19b65ed
 }
 
 - (BOOL)close {
@@ -364,15 +394,22 @@ static void add_some_sql_log(NSString *sql) {
                 if (status != SQLITE_OK)
                 {
                     NSLog(@"execCommand %@ Result : %d  - [%s]", command, status, sqlite3_errmsg(_database));
+                    if (status == SQLITE_CORRUPT || status == SQLITE_IOERR) {
+                        NSLog(@"sqlite 执行execCommand: 出现异常 : %ld", status);
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [[NSNotificationCenter defaultCenter] postNotificationName:@"QIMSQLiteErrorNotification" object:nil];
+                        });
+                    } else {
+                    }
                 }
             } @catch (NSException *exception) {
                 
-                //                NSLog(@"executeNonQuery:withParameters: cast an Error! \nSQL:%@\nandObjs:%@\n%@ at %@\n%s",
-                //                           sqlName,
-                //                           params,
-                //                           exception,
-                //                           [exception callStackSymbols],
-                //                           (_database ? sqlite3_errmsg(_database) : ""));
+//                NSLog(@"executeNonQuery:withParameters: cast an Error! \nSQL:%@\nandObjs:%@\n%@ at %@\n%s",
+//                           sqlName,
+//                           params,
+//                           exception,
+//                           [exception callStackSymbols],
+//                           (_database ? sqlite3_errmsg(_database) : ""));
             } @finally {
             }
         }
@@ -394,10 +431,21 @@ static void add_some_sql_log(NSString *sql) {
     @autoreleasepool {
         @try {
             int ret = sqlite3_prepare_v2(_database, [sqlName UTF8String], -1, &stmt, nil);
-            if (ret != SQLITE_OK)
+            if (ret != SQLITE_OK) {
                 NSLog(@"%s, ON\n%@\nWith\n%@", (_database ? sqlite3_errmsg(_database) : ""), sqlName, params);
+                if (ret == SQLITE_CORRUPT || ret == SQLITE_IOERR) {
+                    NSLog(@"sqlite 执行executeReader:(NSString *)sqlName withParameters:(NSArray *)params: 出现异常 : %ld", ret);
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [[NSNotificationCenter defaultCenter] postNotificationName:@"QIMSQLiteErrorNotification" object:nil];
+                    });
+                } else {
+                }
+            } else {
+                
+            }
             DatabaseAssert(ret == SQLITE_OK && stmt);
-            DatabaseAssert([self setParameters:stmt withParameters:params]);
+            BOOL successed = [self setParameters:stmt withParameters:params];
+            DatabaseAssert(successed == YES);
         } @catch (NSException *exception) {
             NSLog(@"executeReader:withParameters: cast a %s Error! \nSQL:%@\nandObjs:%@\n%@ at %@",
                   (_database ? sqlite3_errmsg(_database) : ""),
@@ -444,14 +492,26 @@ static void add_some_sql_log(NSString *sql) {
         @autoreleasepool {
             sqlite3_stmt *stmt = nil;
             @try {
-                if (!((sqlite3_prepare_v2(_database, [sqlName UTF8String], -1, &stmt, nil) == SQLITE_OK) && stmt))
+                if (!((sqlite3_prepare_v2(_database, [sqlName UTF8String], -1, &stmt, nil) == SQLITE_OK) && stmt)) {
                     [NSException raise:@"NSDatabaseException" format:@""];
+                } else {
+                    
+                }
                 for (NSArray *perParams in params) {
                     DatabaseAssert([self setParameters:stmt withParameters:perParams]);
-                    DatabaseAssert(sqlite3_step(stmt) == SQLITE_DONE);
+                    int ret = sqlite3_step(stmt);
+                    if (ret == SQLITE_CORRUPT || ret == SQLITE_IOERR) {
+                        NSLog(@"sqlite 执行executeBulkInsert:(NSString *)sqlName withParameters: 出现异常 : %ld", ret);
+                        dispatch_async(dispatch_get_main_queue(), ^{
+                            [[NSNotificationCenter defaultCenter] postNotificationName:@"QIMSQLiteErrorNotification" object:nil];
+                        });
+                        succeeded = NO;
+                    } else {
+                        succeeded = YES;
+                    }
+                    DatabaseAssert(ret == SQLITE_DONE);
                     sqlite3_reset(stmt);
                 }
-                succeeded = YES;
             } @catch (NSException *exception) {
                 NSLog(@"executeNonQuery:withParameters: cast an Error! \nSQL:%@\nandObjs:%@\n%@ at %@\n%s",
                       sqlName,
@@ -487,8 +547,17 @@ static void add_some_sql_log(NSString *sql) {
                 if (!((sqlite3_prepare_v2(_database, [sqlName UTF8String], -1, &stmt, nil) == SQLITE_OK) && stmt))
                     [NSException raise:@"NSDatabaseException" format:@""];
                 DatabaseAssert([self setParameters:stmt withParameters:params]);
-                DatabaseAssert(sqlite3_step(stmt) == SQLITE_DONE);
-                succeeded = YES;
+                int ret = sqlite3_step(stmt);
+                DatabaseAssert(ret == SQLITE_DONE);
+                if (ret == SQLITE_CORRUPT || ret == SQLITE_IOERR) {
+                    NSLog(@"sqlite 执行executeNonQuery:withParameters: 出现异常 : %ld", ret);
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [[NSNotificationCenter defaultCenter] postNotificationName:@"QIMSQLiteErrorNotification" object:nil];
+                    });
+                    succeeded = NO;
+                } else {
+                    succeeded = YES;
+                }
             } @catch (NSException *exception) {
                 NSLog(@"executeNonQuery:withParameters: cast an Error! \nSQL:%@\nandObjs:%@\n%@ at %@\n%s",
                       sqlName,
@@ -665,9 +734,10 @@ static void add_some_sql_log(NSString *sql) {
     
     if (transaction) {
         DatabaseFunction privateCallback  = [transaction copy];
-        dispatch_async([_database getCurrentQueue], ^{
-            BOOL succeeded = NO;
-            sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+        __block BOOL succeeded = NO;
+        NSString *version = [UIDevice currentDevice].systemVersion;
+        if (version.doubleValue >= 11.0) {
+            sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
             @try {
                 NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
                 privateCallback(_database);
@@ -677,24 +747,44 @@ static void add_some_sql_log(NSString *sql) {
                 NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
             } @finally {
                 if (succeeded)
-                    sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
+                sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
                 else
-                    sqlite3_exec([_database dbInstance], "rollback transaction", NULL, NULL, NULL);
+                sqlite3_exec([_database dbInstance], "rollback transaction", NULL, NULL, NULL);
                 [privateCallback release];
             }
-        });
+        } else {
+            dispatch_sync([_database getCurrentQueue], ^{
+
+                sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+                @try {
+                    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+                    privateCallback(_database);
+                    [pool release];
+                    succeeded = YES;
+                } @catch (NSException *exception) {
+                    NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
+                } @finally {
+                    if (succeeded)
+                    sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
+                    else
+                    sqlite3_exec([_database dbInstance], "rollback transaction", NULL, NULL, NULL);
+                    [privateCallback release];
+                }
+            });
+        }
     }
 }
 
 - (void) syncUsingTransaction:(DatabaseFunction) transaction {
-    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"SyncUsingTransaction Queue Error");
-    //    if (dispatch_get_current_queue() == dispatch_get_main_queue()) {
-    //        NSLog(@"now in main_queue");
-    //    }
-    if (transaction) {
-        DatabaseFunction privateCallback  = [transaction copy];
-        dispatch_sync([_database getCurrentQueue], ^{
-            sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+    //    NSAssert(dispatch_get_current_queue() != [_database getCurrentQueue],@"SyncUsingTransaction Queue Error");
+    if (dispatch_get_current_queue() == dispatch_get_main_queue()) {
+        //        NSLog(@"now in main_queue");
+    }
+    NSString *version = [UIDevice currentDevice].systemVersion;
+    if (version.doubleValue >= 11.0) {
+        if (transaction) {
+            DatabaseFunction privateCallback  = [transaction copy];
+            sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
             @try {
                 @autoreleasepool {
                     privateCallback(_database);
@@ -705,7 +795,24 @@ static void add_some_sql_log(NSString *sql) {
                 sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
                 [privateCallback release];
             }
-        });
+        }
+    } else {
+        if (transaction) {
+            DatabaseFunction privateCallback  = [transaction copy];
+            dispatch_sync([_database getCurrentQueue], ^{
+                sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+                @try {
+                    @autoreleasepool {
+                        privateCallback(_database);
+                    }
+                } @catch (NSException *exception) {
+                    NSLog(@"syncUsingTransaction cast a Error! %@ at %@", exception, [exception callStackSymbols]);
+                } @finally {
+                    sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
+                    [privateCallback release];
+                }
+            });
+        }
     }
 }
 
@@ -717,9 +824,26 @@ static void add_some_sql_log(NSString *sql) {
         dispatch_queue_t currentQueue       = dispatch_get_main_queue();
         DatabaseFunction privateCallback    = [transaction copy];
         dispatch_block_t privateEnd         = [end copy];
-        
-        dispatch_async([_database getCurrentQueue], ^{
+        NSString *version = [UIDevice currentDevice].systemVersion;
+        if (version.doubleValue >= 11.0) {
+            sqlite3_exec([_database dbInstance], "begin IMMEDIATE transaction", NULL, NULL, NULL);
+        } else {
             sqlite3_exec([_database dbInstance], "begin transaction", NULL, NULL, NULL);
+        }
+        @try {
+            @autoreleasepool {
+                privateCallback(_database);
+            }
+        }
+        @catch (NSException *exception) {
+            NSLog(@"usingTransaction:withComplate: cast a Error! %@ at %@", exception, [exception callStackSymbols]);
+        }
+        @finally {
+            sqlite3_exec([_database dbInstance], "commit transaction", NULL, NULL, NULL);
+            [privateCallback release];
+        }
+        
+        dispatch_async(currentQueue, ^{
             @try {
                 @autoreleasepool {
                     privateCallback(_database);
