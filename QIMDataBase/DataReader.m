@@ -1,5 +1,5 @@
 #import "DataReader.h"
-#import "QIMDatabase.h"
+#import "QIMDataBase.h"
 #import <unistd.h>
 
 #if QIMDB_SQLITE_STANDALONE
@@ -8,7 +8,7 @@
 #import <sqlite3.h>
 #endif
 
-@interface QIMDatabase ()
+@interface QIMDataBase()
 - (void)resultSetDidClose:(DataReader *)resultSet;
 @end
 
@@ -19,7 +19,7 @@
 
 @implementation DataReader
 
-+ (instancetype)resultSetWithStatement:(QIMDBStatement *)statement usingParentDatabase:(QIMDatabase*)aDB {
++ (instancetype)resultSetWithStatement:(QIMDBStatement *)statement usingParentDatabase:(QIMDataBase*)aDB {
     
     DataReader *rs = [[DataReader alloc] init];
     
@@ -191,7 +191,7 @@
                 // If 'next' or 'nextWithError' is called after the result set is closed,
                 // we need to return the appropriate error.
                 NSDictionary* errorMessage = [NSDictionary dictionaryWithObject:@"parentDB does not exist" forKey:NSLocalizedDescriptionKey];
-                *outErr = [NSError errorWithDomain:@"QIMDatabase" code:SQLITE_MISUSE userInfo:errorMessage];
+                *outErr = [NSError errorWithDomain:@"QIMDataBase" code:SQLITE_MISUSE userInfo:errorMessage];
             }
             
         }
@@ -395,14 +395,17 @@
     else if (columnType == SQLITE_BLOB) {
         returnValue = [self dataForColumnIndex:columnIdx];
     }
+    else if (columnType == SQLITE_NULL) {
+        return nil;
+    }
     else {
         //default to a string for everything else
         returnValue = [self stringForColumnIndex:columnIdx];
     }
     
-    if (returnValue == nil) {
-        returnValue = [NSNull null];
-    }
+//    if (returnValue == nil) {
+//        returnValue = [NSNull null];
+//    }
     
     return returnValue;
 }

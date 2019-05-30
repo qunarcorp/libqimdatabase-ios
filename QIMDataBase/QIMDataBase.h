@@ -1,6 +1,6 @@
 #import <Foundation/Foundation.h>
 #import "DataReader.h"
-#import "QIMDatabasePool.h"
+#import "QIMDataBasePool.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -53,13 +53,13 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  ### Usage
  The three main classes in QIMDB are:
  
- - `QIMDatabase` - Represents a single SQLite database.  Used for executing SQL statements.
- - `<DataReader>` - Represents the results of executing a query on an `QIMDatabase`.
- - `<QIMDatabaseQueue>` - If you want to perform queries and updates on multiple threads, you'll want to use this class.
+ - `QIMDataBase` - Represents a single SQLite database.  Used for executing SQL statements.
+ - `<DataReader>` - Represents the results of executing a query on an `QIMDataBase`.
+ - `<QIMDataBaseQueue>` - If you want to perform queries and updates on multiple threads, you'll want to use this class.
  
  ### See also
  
- - `<QIMDatabasePool>` - A pool of `QIMDatabase` objects.
+ - `<QIMDataBasePool>` - A pool of `QIMDataBase` objects.
  - `<QIMDBStatement>` - A wrapper for `sqlite_stmt`.
  
  ### External links
@@ -69,7 +69,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  - [QIMDB mailing list](http://groups.google.com/group/QIMDB)
  - [SQLite FAQ](http://www.sqlite.org/faq.html)
  
- @warning Do not instantiate a single `QIMDatabase` object and use it across multiple threads. Instead, use `<QIMDatabaseQueue>`.
+ @warning Do not instantiate a single `QIMDataBase` object and use it across multiple threads. Instead, use `<QIMDataBaseQueue>`.
  
  */
 
@@ -77,7 +77,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
 #pragma clang diagnostic ignored "-Wobjc-interface-ivars"
 
 
-@interface QIMDatabase : NSObject
+@interface QIMDataBase: NSObject
 
 ///-----------------
 /// @name Properties
@@ -107,111 +107,111 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
 /// @name Initialization
 ///---------------------
 
-/** Create a `QIMDatabase` object.
+/** Create a `QIMDataBase` object.
  
- An `QIMDatabase` is created with a path to a SQLite database file.  This path can be one of these three:
+ An `QIMDataBase` is created with a path to a SQLite database file.  This path can be one of these three:
  
  1. A file system path.  The file does not have to exist on disk.  If it does not exist, it is created for you.
- 2. An empty string (`@""`).  An empty database is created at a temporary location.  This database is deleted with the `QIMDatabase` connection is closed.
- 3. `nil`.  An in-memory database is created.  This database will be destroyed with the `QIMDatabase` connection is closed.
+ 2. An empty string (`@""`).  An empty database is created at a temporary location.  This database is deleted with the `QIMDataBase` connection is closed.
+ 3. `nil`.  An in-memory database is created.  This database will be destroyed with the `QIMDataBase` connection is closed.
  
  For example, to create/open a database in your Mac OS X `tmp` folder:
  
- QIMDatabase *db = [QIMDatabase databaseWithPath:@"/tmp/tmp.db"];
+ QIMDataBase*db = [QIMDataBasedatabaseWithPath:@"/tmp/tmp.db"];
  
  Or, in iOS, you might open a database in the app's `Documents` directory:
  
  NSString *docsPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
  NSString *dbPath   = [docsPath stringByAppendingPathComponent:@"test.db"];
- QIMDatabase *db     = [QIMDatabase databaseWithPath:dbPath];
+ QIMDataBase*db     = [QIMDataBasedatabaseWithPath:dbPath];
  
  (For more information on temporary and in-memory databases, read the sqlite documentation on the subject: [http://www.sqlite.org/inmemorydb.html](http://www.sqlite.org/inmemorydb.html))
  
  @param inPath Path of database file
  
- @return `QIMDatabase` object if successful; `nil` if failure.
+ @return `QIMDataBase` object if successful; `nil` if failure.
  
  */
 
 + (instancetype)databaseWithPath:(NSString * _Nullable)inPath;
 
-/** Create a `QIMDatabase` object.
+/** Create a `QIMDataBase` object.
  
- An `QIMDatabase` is created with a path to a SQLite database file.  This path can be one of these three:
+ An `QIMDataBase` is created with a path to a SQLite database file.  This path can be one of these three:
  
  1. A file system URL.  The file does not have to exist on disk.  If it does not exist, it is created for you.
- 2. `nil`.  An in-memory database is created.  This database will be destroyed with the `QIMDatabase` connection is closed.
+ 2. `nil`.  An in-memory database is created.  This database will be destroyed with the `QIMDataBase` connection is closed.
  
  For example, to create/open a database in your Mac OS X `tmp` folder:
  
- QIMDatabase *db = [QIMDatabase databaseWithPath:@"/tmp/tmp.db"];
+ QIMDataBase*db = [QIMDataBasedatabaseWithPath:@"/tmp/tmp.db"];
  
  Or, in iOS, you might open a database in the app's `Documents` directory:
  
  NSString *docsPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
  NSString *dbPath   = [docsPath stringByAppendingPathComponent:@"test.db"];
- QIMDatabase *db     = [QIMDatabase databaseWithPath:dbPath];
+ QIMDataBase*db     = [QIMDataBasedatabaseWithPath:dbPath];
  
  (For more information on temporary and in-memory databases, read the sqlite documentation on the subject: [http://www.sqlite.org/inmemorydb.html](http://www.sqlite.org/inmemorydb.html))
  
  @param url The local file URL (not remote URL) of database file
  
- @return `QIMDatabase` object if successful; `nil` if failure.
+ @return `QIMDataBase` object if successful; `nil` if failure.
  
  */
 
 + (instancetype)databaseWithURL:(NSURL * _Nullable)url;
 
-/** Initialize a `QIMDatabase` object.
+/** Initialize a `QIMDataBase` object.
  
- An `QIMDatabase` is created with a path to a SQLite database file.  This path can be one of these three:
+ An `QIMDataBase` is created with a path to a SQLite database file.  This path can be one of these three:
  
  1. A file system path.  The file does not have to exist on disk.  If it does not exist, it is created for you.
- 2. An empty string (`@""`).  An empty database is created at a temporary location.  This database is deleted with the `QIMDatabase` connection is closed.
- 3. `nil`.  An in-memory database is created.  This database will be destroyed with the `QIMDatabase` connection is closed.
+ 2. An empty string (`@""`).  An empty database is created at a temporary location.  This database is deleted with the `QIMDataBase` connection is closed.
+ 3. `nil`.  An in-memory database is created.  This database will be destroyed with the `QIMDataBase` connection is closed.
  
  For example, to create/open a database in your Mac OS X `tmp` folder:
  
- QIMDatabase *db = [QIMDatabase databaseWithPath:@"/tmp/tmp.db"];
+ QIMDataBase*db = [QIMDataBasedatabaseWithPath:@"/tmp/tmp.db"];
  
  Or, in iOS, you might open a database in the app's `Documents` directory:
  
  NSString *docsPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
  NSString *dbPath   = [docsPath stringByAppendingPathComponent:@"test.db"];
- QIMDatabase *db     = [QIMDatabase databaseWithPath:dbPath];
+ QIMDataBase*db     = [QIMDataBasedatabaseWithPath:dbPath];
  
  (For more information on temporary and in-memory databases, read the sqlite documentation on the subject: [http://www.sqlite.org/inmemorydb.html](http://www.sqlite.org/inmemorydb.html))
  
  @param path Path of database file.
  
- @return `QIMDatabase` object if successful; `nil` if failure.
+ @return `QIMDataBase` object if successful; `nil` if failure.
  
  */
 
 - (instancetype)initWithPath:(NSString * _Nullable)path;
 
-/** Initialize a `QIMDatabase` object.
+/** Initialize a `QIMDataBase` object.
  
- An `QIMDatabase` is created with a local file URL to a SQLite database file.  This path can be one of these three:
+ An `QIMDataBase` is created with a local file URL to a SQLite database file.  This path can be one of these three:
  
  1. A file system URL.  The file does not have to exist on disk.  If it does not exist, it is created for you.
- 2. `nil`.  An in-memory database is created.  This database will be destroyed with the `QIMDatabase` connection is closed.
+ 2. `nil`.  An in-memory database is created.  This database will be destroyed with the `QIMDataBase` connection is closed.
  
  For example, to create/open a database in your Mac OS X `tmp` folder:
  
- QIMDatabase *db = [QIMDatabase databaseWithPath:@"/tmp/tmp.db"];
+ QIMDataBase*db = [QIMDataBasedatabaseWithPath:@"/tmp/tmp.db"];
  
  Or, in iOS, you might open a database in the app's `Documents` directory:
  
  NSString *docsPath = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES)[0];
  NSString *dbPath   = [docsPath stringByAppendingPathComponent:@"test.db"];
- QIMDatabase *db     = [QIMDatabase databaseWithPath:dbPath];
+ QIMDataBase*db     = [QIMDataBasedatabaseWithPath:dbPath];
  
  (For more information on temporary and in-memory databases, read the sqlite documentation on the subject: [http://www.sqlite.org/inmemorydb.html](http://www.sqlite.org/inmemorydb.html))
  
  @param url The file `NSURL` of database file.
  
- @return `QIMDatabase` object if successful; `nil` if failure.
+ @return `QIMDataBase` object if successful; `nil` if failure.
  
  */
 
@@ -1301,7 +1301,7 @@ typedef NS_ENUM(int, SqliteValueType) {
  
  Example:
  
- myDB.dateFormat = [QIMDatabase storeableDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+ myDB.dateFormat = [QIMDataBasestoreableDateFormat:@"yyyy-MM-dd HH:mm:ss"];
  
  @param format A valid NSDateFormatter format string.
  
@@ -1334,7 +1334,7 @@ typedef NS_ENUM(int, SqliteValueType) {
 
 /** Set to a date formatter to use string dates with sqlite instead of the default UNIX timestamps.
  
- @param format Set to nil to use UNIX timestamps. Defaults to nil. Should be set using a formatter generated using QIMDatabase::storeableDateFormat.
+ @param format Set to nil to use UNIX timestamps. Defaults to nil. Should be set using a formatter generated using QIMDataBase::storeableDateFormat.
  
  @see hasDateFormatter
  @see setDateFormat:
@@ -1382,11 +1382,11 @@ typedef NS_ENUM(int, SqliteValueType) {
 
 /** Objective-C wrapper for `sqlite3_stmt`
  
- This is a wrapper for a SQLite `sqlite3_stmt`. Generally when using QIMDB you will not need to interact directly with `QIMDBStatement`, but rather with `<QIMDatabase>` and `<DataReader>` only.
+ This is a wrapper for a SQLite `sqlite3_stmt`. Generally when using QIMDB you will not need to interact directly with `QIMDBStatement`, but rather with `<QIMDataBase>` and `<DataReader>` only.
  
  ### See also
  
- - `<QIMDatabase>`
+ - `<QIMDataBase>`
  - `<DataReader>`
  - [`sqlite3_stmt`](http://www.sqlite.org/c3ref/stmt.html)
  */

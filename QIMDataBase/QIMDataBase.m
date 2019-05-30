@@ -8,7 +8,7 @@
 #import <sqlite3.h>
 #endif
 
-@interface QIMDatabase () {
+@interface QIMDataBase() {
     void*               _db;
     BOOL                _isExecutingStatement;
     NSTimeInterval      _startBusyRetryTime;
@@ -28,7 +28,7 @@ NS_ASSUME_NONNULL_END
 
 @end
 
-@implementation QIMDatabase
+@implementation QIMDataBase
 
 // Because these two properties have all of their accessor methods implemented,
 // we have to synthesize them to get the corresponding ivars. The rest of the
@@ -37,7 +37,7 @@ NS_ASSUME_NONNULL_END
 @synthesize shouldCacheStatements = _shouldCacheStatements;
 @synthesize maxBusyRetryTimeInterval = _maxBusyRetryTimeInterval;
 
-#pragma mark QIMDatabase instantiation and deallocation
+#pragma mark QIMDataBaseinstantiation and deallocation
 
 + (instancetype)databaseWithPath:(NSString *)aPath {
     return QIMDBReturnAutoreleased([[self alloc] initWithPath:aPath]);
@@ -104,7 +104,7 @@ NS_ASSUME_NONNULL_END
 
 // returns 0x0240 for version 2.4.  This makes it super easy to do things like:
 // /* need to make sure to do X with QIMDB version 2.4 or later */
-// if ([QIMDatabase QIMDBVersion] >= 0x0240) { … }
+// if ([QIMDataBaseQIMDBVersion] >= 0x0240) { … }
 
 + (SInt32)QIMDBVersion {
     
@@ -175,14 +175,21 @@ NS_ASSUME_NONNULL_END
     
     //    int err = sqlite3_open([self sqlitePath], (sqlite3**)&_db );
     int err = sqlite3_open_v2([self sqlitePath], (sqlite3**)&_db, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX, NULL);
-    sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
+//    sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
     sqlite3_exec(_db, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
     
     if(err != SQLITE_OK) {
         NSLog(@"error opening!: %d", err);
         return NO;
     }
-    
+    NSLog(@"sqlite3_threadsafe : %d", sqlite3_threadsafe());
+    int err2 = sqlite3_config(SQLITE_CONFIG_SERIALIZED);
+    if (err2 == SQLITE_OK) {
+        NSLog(@"Can now use sqlite on multiple threads, using the same connection");
+    } else {
+        NSLog(@"setting sqlite thread safe mode to serialized failed!!! return code: %d", err2);
+    }
+
     if (_maxBusyRetryTimeInterval > 0.0) {
         // set the handler
         [self setMaxBusyRetryTimeInterval:_maxBusyRetryTimeInterval];
@@ -216,9 +223,15 @@ NS_ASSUME_NONNULL_END
         NSLog(@"error opening!: %d", err);
         return NO;
     }
-    sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
+//    sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
     sqlite3_exec(_db, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
-    
+    NSLog(@"sqlite3_threadsafe : %d", sqlite3_threadsafe());
+    int err2 = sqlite3_config(SQLITE_CONFIG_SERIALIZED);
+    if (err2 == SQLITE_OK) {
+        NSLog(@"Can now use sqlite on multiple threads, using the same connection");
+    } else {
+        NSLog(@"setting sqlite thread safe mode to serialized failed!!! return code: %d", err2);
+    }
     if (_maxBusyRetryTimeInterval > 0.0) {
         // set the handler
         [self setMaxBusyRetryTimeInterval:_maxBusyRetryTimeInterval];
@@ -285,7 +298,7 @@ NS_ASSUME_NONNULL_END
 //       files with appledoc will prevent this problem from occurring.
 
 static int QIMDBDatabaseBusyHandler(void *f, int count) {
-    QIMDatabase *self = (__bridge QIMDatabase*)f;
+    QIMDataBase*self = (__bridge QIMDataBase*)f;
     
     if (count == 0) {
         self->_startBusyRetryTime = [NSDate timeIntervalSinceReferenceDate];
@@ -329,7 +342,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
 
 
 // we no longer make busyRetryTimeout public
-// but for folks who don't bother noticing that the interface to QIMDatabase changed,
+// but for folks who don't bother noticing that the interface to QIMDataBasechanged,
 // we'll still implement the method so they don't get suprise crashes
 - (int)busyRetryTimeout {
     NSLog(@"%s:%d", __FUNCTION__, __LINE__);
@@ -398,7 +411,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
 - (void)setCachedStatement:(QIMDBStatement*)statement forQuery:(NSString*)query {
     NSParameterAssert(query);
     if (!query) {
-        NSLog(@"API misuse, -[QIMDatabase setCachedStatement:forQuery:] query must not be nil");
+        NSLog(@"API misuse, -[QIMDataBasesetCachedStatement:forQuery:] query must not be nil");
         return;
     }
     
@@ -514,11 +527,11 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
 }
 
 - (void)warnInUse {
-    NSLog(@"The QIMDatabase %@ is currently in use.", self);
+    NSLog(@"The QIMDataBase%@ is currently in use.", self);
     
 #ifndef NS_BLOCK_ASSERTIONS
     if (_crashOnErrors) {
-        NSAssert(false, @"The QIMDatabase %@ is currently in use.", self);
+        NSAssert(false, @"The QIMDataBase%@ is currently in use.", self);
         abort();
     }
 #endif
@@ -528,11 +541,11 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     
     if (!_isOpen) {
         
-        NSLog(@"The QIMDatabase %@ is not open.", self);
+        NSLog(@"The QIMDataBase%@ is not open.", self);
         
 #ifndef NS_BLOCK_ASSERTIONS
         if (_crashOnErrors) {
-            NSAssert(false, @"The QIMDatabase %@ is not open.", self);
+            NSAssert(false, @"The QIMDataBase%@ is not open.", self);
             abort();
         }
 #endif
@@ -566,7 +579,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
 - (NSError*)errorWithMessage:(NSString *)message {
     NSDictionary* errorMessage = [NSDictionary dictionaryWithObject:message forKey:NSLocalizedDescriptionKey];
     
-    return [NSError errorWithDomain:@"QIMDatabase" code:sqlite3_errcode(_db) userInfo:errorMessage];
+    return [NSError errorWithDomain:@"QIMDataBase" code:sqlite3_errcode(_db) userInfo:errorMessage];
 }
 
 - (NSError*)lastError {
@@ -610,7 +623,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
 
 - (void)bindObject:(id)obj toColumn:(int)idx inStatement:(sqlite3_stmt*)pStmt {
     
-    if ((!obj) || ((NSNull *)obj == [NSNull null])) {
+    if ((!obj) || ((NSNull *)obj == [NSNull null]) || ([obj isKindOfClass:[NSString class]] && [((NSString*)obj) isEqualToString:@":NULL"])) {
         sqlite3_bind_null(pStmt, idx);
     }
     
@@ -1489,7 +1502,7 @@ static NSString *QIMDBEscapeSavePointName(NSString *savepointName) {
 #else
     NSString *errorMessage = NSLocalizedStringFromTable(@"Save point functions require SQLite 3.7", @"QIMDB", nil);
     if (self.logsErrors) NSLog(@"%@", errorMessage);
-    return [NSError errorWithDomain:@"QIMDatabase" code:0 userInfo:@{NSLocalizedDescriptionKey : errorMessage}];
+    return [NSError errorWithDomain:@"QIMDataBase" code:0 userInfo:@{NSLocalizedDescriptionKey : errorMessage}];
 #endif
 }
 

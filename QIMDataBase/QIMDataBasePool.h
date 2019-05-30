@@ -1,5 +1,5 @@
 //
-//  QIMDatabasePool.h
+//  QIMDataBasePool.h
 //  QIMDataBase
 //
 //  Created by lilu on 2019/5/29.
@@ -9,27 +9,27 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@class QIMDatabase;
+@class QIMDataBase;
 
-/** Pool of `<QIMDatabase>` objects.
+/** Pool of `<QIMDataBase>` objects.
  
  ### See also
  
- - `<QIMDatabaseQueue>`
- - `<QIMDatabase>`
+ - `<QIMDataBaseQueue>`
+ - `<QIMDataBase>`
  
- @warning Before using `QIMDatabasePool`, please consider using `<QIMDatabaseQueue>` instead.
+ @warning Before using `QIMDataBasePool`, please consider using `<QIMDataBaseQueue>` instead.
  
- If you really really really know what you're doing and `QIMDatabasePool` is what
+ If you really really really know what you're doing and `QIMDataBasePool` is what
  you really really need (ie, you're using a read only database), OK you can use
  it.  But just be careful not to deadlock!
  
  For an example on deadlocking, search for:
- `ONLY_USE_THE_POOL_IF_YOU_ARE_DOING_READS_OTHERWISE_YOULL_DEADLOCK_USE_QIMDatabaseQUEUE_INSTEAD`
+ `ONLY_USE_THE_POOL_IF_YOU_ARE_DOING_READS_OTHERWISE_YOULL_DEADLOCK_USE_QIMDataBaseQUEUE_INSTEAD`
  in the main.m file.
  */
 
-@interface QIMDatabasePool : NSObject
+@interface QIMDataBasePool : NSObject
 
 /** Database path */
 
@@ -60,7 +60,7 @@ NS_ASSUME_NONNULL_BEGIN
  
  @param aPath The file path of the database.
  
- @return The `QIMDatabasePool` object. `nil` on error.
+ @return The `QIMDataBasePool` object. `nil` on error.
  */
 
 + (instancetype)databasePoolWithPath:(NSString * _Nullable)aPath;
@@ -71,7 +71,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param openFlags Flags passed to the openWithFlags method of the database.
  @param vfsName The name of a custom virtual file system
 
- @return The `QIMDatabasePool` object. `nil` on error.
+ @return The `QIMDataBasePool` object. `nil` on error.
  */
 + (instancetype)databasePoolWithPath:(NSString *)aPath flags:(int)openFlags vfs:(NSString *)vfsName;
 
@@ -79,7 +79,7 @@ NS_ASSUME_NONNULL_BEGIN
  
  @param url The file `NSURL` of the database.
  
- @return The `QIMDatabasePool` object. `nil` on error.
+ @return The `QIMDataBasePool` object. `nil` on error.
  */
 
 + (instancetype)databasePoolWithURL:(NSURL * _Nullable)url;
@@ -89,7 +89,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param aPath The file path of the database.
  @param openFlags Flags passed to the openWithFlags method of the database.
  
- @return The `QIMDatabasePool` object. `nil` on error.
+ @return The `QIMDataBasePool` object. `nil` on error.
  */
 
 + (instancetype)databasePoolWithPath:(NSString * _Nullable)aPath flags:(int)openFlags;
@@ -99,7 +99,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param url The file `NSURL` of the database.
  @param openFlags Flags passed to the openWithFlags method of the database.
  
- @return The `QIMDatabasePool` object. `nil` on error.
+ @return The `QIMDataBasePool` object. `nil` on error.
  */
 
 + (instancetype)databasePoolWithURL:(NSURL * _Nullable)url flags:(int)openFlags;
@@ -108,7 +108,7 @@ NS_ASSUME_NONNULL_BEGIN
  
  @param aPath The file path of the database.
  
- @return The `QIMDatabasePool` object. `nil` on error.
+ @return The `QIMDataBasePool` object. `nil` on error.
  */
 
 - (instancetype)initWithPath:(NSString * _Nullable)aPath;
@@ -117,7 +117,7 @@ NS_ASSUME_NONNULL_BEGIN
  
  @param url The file `NSURL of the database.
  
- @return The `QIMDatabasePool` object. `nil` on error.
+ @return The `QIMDataBasePool` object. `nil` on error.
  */
 
 - (instancetype)initWithURL:(NSURL * _Nullable)url;
@@ -127,7 +127,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param aPath The file path of the database.
  @param openFlags Flags passed to the openWithFlags method of the database
  
- @return The `QIMDatabasePool` object. `nil` on error.
+ @return The `QIMDataBasePool` object. `nil` on error.
  */
 
 - (instancetype)initWithPath:(NSString * _Nullable)aPath flags:(int)openFlags;
@@ -137,7 +137,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param url The file `NSURL` of the database.
  @param openFlags Flags passed to the openWithFlags method of the database
  
- @return The `QIMDatabasePool` object. `nil` on error.
+ @return The `QIMDataBasePool` object. `nil` on error.
  */
 
 - (instancetype)initWithURL:(NSURL * _Nullable)url flags:(int)openFlags;
@@ -148,7 +148,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param openFlags Flags passed to the openWithFlags method of the database
  @param vfsName The name of a custom virtual file system
  
- @return The `QIMDatabasePool` object. `nil` on error.
+ @return The `QIMDataBasePool` object. `nil` on error.
  */
 
 - (instancetype)initWithPath:(NSString * _Nullable)aPath flags:(int)openFlags vfs:(NSString * _Nullable)vfsName;
@@ -159,16 +159,16 @@ NS_ASSUME_NONNULL_BEGIN
  @param openFlags Flags passed to the openWithFlags method of the database
  @param vfsName The name of a custom virtual file system
  
- @return The `QIMDatabasePool` object. `nil` on error.
+ @return The `QIMDataBasePool` object. `nil` on error.
  */
 
 - (instancetype)initWithURL:(NSURL * _Nullable)url flags:(int)openFlags vfs:(NSString * _Nullable)vfsName;
 
-/** Returns the Class of 'QIMDatabase' subclass, that will be used to instantiate database object.
+/** Returns the Class of 'QIMDataBase' subclass, that will be used to instantiate database object.
  
- Subclasses can override this method to return specified Class of 'QIMDatabase' subclass.
+ Subclasses can override this method to return specified Class of 'QIMDataBase' subclass.
  
- @return The Class of 'QIMDatabase' subclass, that will be used to instantiate database object.
+ @return The Class of 'QIMDataBase' subclass, that will be used to instantiate database object.
  */
 
 + (Class)databaseClass;
@@ -202,14 +202,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 /** Synchronously perform database operations in pool.
  
- @param block The code to be run on the `QIMDatabasePool` pool.
+ @param block The code to be run on the `QIMDataBasePool` pool.
  */
 
-- (void)inDatabase:(__attribute__((noescape)) void (^)(QIMDatabase *db))block;
+- (void)inDatabase:(__attribute__((noescape)) void (^)(QIMDataBase*db))block;
 
 /** Synchronously perform database operations in pool using transaction.
  
- @param block The code to be run on the `QIMDatabasePool` pool.
+ @param block The code to be run on the `QIMDataBasePool` pool.
  
  @warning   Unlike SQLite's `BEGIN TRANSACTION`, this method currently performs
  an exclusive transaction, not a deferred transaction. This behavior
@@ -220,69 +220,69 @@ NS_ASSUME_NONNULL_BEGIN
  to make your intent explicit, but also to future-proof your code.
  */
 
-- (void)inTransaction:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block;
+- (void)inTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
 
 /** Synchronously perform database operations in pool using exclusive transaction.
  
- @param block The code to be run on the `QIMDatabasePool` pool.
+ @param block The code to be run on the `QIMDataBasePool` pool.
  */
 
-- (void)inExclusiveTransaction:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block;
+- (void)inExclusiveTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
 
 /** Synchronously perform database operations in pool using deferred transaction.
  
- @param block The code to be run on the `QIMDatabasePool` pool.
+ @param block The code to be run on the `QIMDataBasePool` pool.
  */
 
-- (void)inDeferredTransaction:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block;
+- (void)inDeferredTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
 
 /** Synchronously perform database operations on queue, using immediate transactions.
  
- @param block The code to be run on the queue of `QIMDatabaseQueue`
+ @param block The code to be run on the queue of `QIMDataBaseQueue`
  */
 
-- (void)syncUsingTransaction:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block;
+- (void)syncUsingTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
 
 /** Synchronously perform database operations in pool using save point.
  
- @param block The code to be run on the `QIMDatabasePool` pool.
+ @param block The code to be run on the `QIMDataBasePool` pool.
  
  @return `NSError` object if error; `nil` if successful.
  
- @warning You can not nest these, since calling it will pull another database out of the pool and you'll get a deadlock. If you need to nest, use `<[QIMDatabase startSavePointWithName:error:]>` instead.
+ @warning You can not nest these, since calling it will pull another database out of the pool and you'll get a deadlock. If you need to nest, use `<[QIMDataBasestartSavePointWithName:error:]>` instead.
  */
 
-- (NSError * _Nullable)inSavePoint:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block;
+- (NSError * _Nullable)inSavePoint:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
 
 @end
 
 
-/** QIMDatabasePool delegate category
+/** QIMDataBasePool delegate category
  
- This is a category that defines the protocol for the QIMDatabasePool delegate
+ This is a category that defines the protocol for the QIMDataBasePool delegate
  */
 
-@interface NSObject (QIMDatabasePoolDelegate)
+@interface NSObject (QIMDataBasePoolDelegate)
 
 /** Asks the delegate whether database should be added to the pool.
  
- @param pool     The `QIMDatabasePool` object.
- @param database The `QIMDatabase` object.
+ @param pool     The `QIMDataBasePool` object.
+ @param database The `QIMDataBase` object.
  
  @return `YES` if it should add database to pool; `NO` if not.
  
  */
 
-- (BOOL)databasePool:(QIMDatabasePool*)pool shouldAddDatabaseToPool:(QIMDatabase*)database;
+- (BOOL)databasePool:(QIMDataBasePool*)pool shouldAddDatabaseToPool:(QIMDataBase*)database;
 
 /** Tells the delegate that database was added to the pool.
  
- @param pool     The `QIMDatabasePool` object.
- @param database The `QIMDatabase` object.
+ @param pool     The `QIMDataBasePool` object.
+ @param database The `QIMDataBase` object.
  
  */
 
-- (void)databasePool:(QIMDatabasePool*)pool didAddDatabase:(QIMDatabase*)database;
+- (void)databasePool:(QIMDataBasePool*)pool didAddDatabase:(QIMDataBase*)database;
 
 @end
 

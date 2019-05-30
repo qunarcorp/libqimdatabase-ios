@@ -14,19 +14,19 @@ NS_ASSUME_NONNULL_BEGIN
 #endif
 #endif
 
-@class QIMDatabase;
+@class QIMDataBase;
 @class QIMDBStatement;
 
-/** Represents the results of executing a query on an `<QIMDatabase>`.
+/** Represents the results of executing a query on an `<QIMDataBase>`.
  
  ### See also
  
- - `<QIMDatabase>`
+ - `<QIMDataBase>`
  */
 
 @interface DataReader : NSObject
 
-@property (nonatomic, retain, nullable) QIMDatabase *parentDB;
+@property (nonatomic, retain, nullable) QIMDataBase*parentDB;
 
 ///-----------------
 /// @name Properties
@@ -52,12 +52,12 @@ NS_ASSUME_NONNULL_BEGIN
  
  @param statement A `<QIMDBStatement>` to be performed
  
- @param aDB A `<QIMDatabase>` to be used
+ @param aDB A `<QIMDataBase>` to be used
  
  @return A `DataReader` on success; `nil` on failure
  */
 
-+ (instancetype)resultSetWithStatement:(QIMDBStatement *)statement usingParentDatabase:(QIMDatabase*)aDB;
++ (instancetype)resultSetWithStatement:(QIMDBStatement *)statement usingParentDatabase:(QIMDataBase*)aDB;
 
 /** Close result set */
 

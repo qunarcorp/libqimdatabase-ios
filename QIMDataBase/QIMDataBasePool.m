@@ -1,5 +1,5 @@
 //
-//  QIMDatabasePool.m
+//  QIMDataBasePool.m
 //  QIMDataBase
 //
 //  Created by lilu on 2019/5/29.
@@ -11,8 +11,8 @@
 #import <sqlite3.h>
 #endif
 
-#import "QIMDatabasePool.h"
-#import "QIMDatabase.h"
+#import "QIMDataBasePool.h"
+#import "QIMDataBase.h"
 
 typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     QIMDBTransactionExclusive,
@@ -20,20 +20,20 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     QIMDBTransactionImmediate,
 };
 
-@interface QIMDatabasePool () {
+@interface QIMDataBasePool () {
     dispatch_queue_t    _lockQueue;
     
     NSMutableArray      *_databaseInPool;
     NSMutableArray      *_databaseOutPool;
 }
 
-- (void)pushDatabaseBackInPool:(QIMDatabase*)db;
-- (QIMDatabase*)db;
+- (void)pushDatabaseBackInPool:(QIMDataBase*)db;
+- (QIMDataBase*)db;
 
 @end
 
 
-@implementation QIMDatabasePool
+@implementation QIMDataBasePool
 @synthesize path=_path;
 @synthesize delegate=_delegate;
 @synthesize maximumNumberOfDatabasesToCreate=_maximumNumberOfDatabasesToCreate;
@@ -75,7 +75,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
         _databaseOutPool    = QIMDBReturnRetained([NSMutableArray array]);
         _openFlags          = openFlags;
         _vfsName            = [vfsName copy];
-        _maximumNumberOfDatabasesToCreate = 4;
+        _maximumNumberOfDatabasesToCreate = 30;
     }
     
     return self;
@@ -103,7 +103,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
 }
 
 + (Class)databaseClass {
-    return [QIMDatabase class];
+    return [QIMDataBase class];
 }
 
 - (void)dealloc {
@@ -128,7 +128,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     dispatch_sync(_lockQueue, aBlock);
 }
 
-- (void)pushDatabaseBackInPool:(QIMDatabase*)db {
+- (void)pushDatabaseBackInPool:(QIMDataBase*)db {
     
     if (!db) { // db can be null if we set an upper bound on the # of databases to create.
         return;
@@ -137,7 +137,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     [self executeLocked:^() {
         
         if ([self->_databaseInPool containsObject:db]) {
-            [[NSException exceptionWithName:@"Database already in pool" reason:@"The QIMDatabase being put back into the pool is already present in the pool" userInfo:nil] raise];
+            [[NSException exceptionWithName:@"Database already in pool" reason:@"The QIMDataBasebeing put back into the pool is already present in the pool" userInfo:nil] raise];
         }
         
         [self->_databaseInPool addObject:db];
@@ -146,9 +146,9 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     }];
 }
 
-- (QIMDatabase*)db {
+- (QIMDataBase*)db {
     
-    __block QIMDatabase *db;
+    __block QIMDataBase*db;
     
     
     [self executeLocked:^() {
@@ -245,21 +245,21 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     }];
 }
 
-- (void)inDatabase:(__attribute__((noescape)) void (^)(QIMDatabase *db))block {
+- (void)inDatabase:(__attribute__((noescape)) void (^)(QIMDataBase*db))block {
     
-    QIMDatabase *db = [self db];
+    QIMDataBase*db = [self db];
     
     block(db);
     
     [self pushDatabaseBackInPool:db];
 }
 
-- (void)beginTransaction:(QIMDBTransaction)transaction withBlock:(void (^)(QIMDatabase *db, BOOL *rollback))block {
+- (void)beginTransaction:(QIMDBTransaction)transaction withBlock:(void (^)(QIMDataBase*db, BOOL *rollback))block {
     
     BOOL shouldRollback = NO;
     
-    QIMDatabase *db = [self db];
-    
+    QIMDataBase*db = [self db];
+    NSLog(@"hhhhhhhhhhhhdatabase : %@", db);
     switch (transaction) {
         case QIMDBTransactionExclusive:
             [db beginTransaction];
@@ -285,23 +285,23 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     [self pushDatabaseBackInPool:db];
 }
 
-- (void)inTransaction:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block {
+- (void)inTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block {
     [self beginTransaction:QIMDBTransactionExclusive withBlock:block];
 }
 
-- (void)inDeferredTransaction:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block {
+- (void)inDeferredTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block {
     [self beginTransaction:QIMDBTransactionDeferred withBlock:block];
 }
 
-- (void)inExclusiveTransaction:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block {
+- (void)inExclusiveTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block {
     [self beginTransaction:QIMDBTransactionExclusive withBlock:block];
 }
 
-- (void)syncUsingTransaction:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block {
+- (void)syncUsingTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block {
     [self beginTransaction:QIMDBTransactionImmediate withBlock:block];
 }
 
-- (NSError*)inSavePoint:(__attribute__((noescape)) void (^)(QIMDatabase *db, BOOL *rollback))block {
+- (NSError*)inSavePoint:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block {
 #if SQLITE_VERSION_NUMBER >= 3007000
     static unsigned long savePointIdx = 0;
     
@@ -309,7 +309,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     
     BOOL shouldRollback = NO;
     
-    QIMDatabase *db = [self db];
+    QIMDataBase*db = [self db];
     
     NSError *err = 0x00;
     
@@ -332,7 +332,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
 #else
     NSString *errorMessage = NSLocalizedStringFromTable(@"Save point functions require SQLite 3.7", @"QIMDB", nil);
     if (self.logsErrors) NSLog(@"%@", errorMessage);
-    return [NSError errorWithDomain:@"QIMDatabase" code:0 userInfo:@{NSLocalizedDescriptionKey : errorMessage}];
+    return [NSError errorWithDomain:@"QIMDataBase" code:0 userInfo:@{NSLocalizedDescriptionKey : errorMessage}];
 #endif
 }
 
