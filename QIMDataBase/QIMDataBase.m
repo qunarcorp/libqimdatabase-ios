@@ -5,7 +5,7 @@
 #if QIMDB_SQLITE_STANDALONE
 #import <sqlite3/sqlite3.h>
 #else
-#import <sqlite3.h>
+#import "sqlite3.h"
 #endif
 
 @interface QIMDataBase() {
@@ -183,12 +183,12 @@ NS_ASSUME_NONNULL_END
         return NO;
     }
     NSLog(@"sqlite3_threadsafe : %d", sqlite3_threadsafe());
-    int err2 = sqlite3_config(SQLITE_CONFIG_SERIALIZED);
-    if (err2 == SQLITE_OK) {
-        NSLog(@"Can now use sqlite on multiple threads, using the same connection");
-    } else {
-        NSLog(@"setting sqlite thread safe mode to serialized failed!!! return code: %d", err2);
-    }
+//    int err2 = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
+//    if (err2 == SQLITE_OK) {
+//        NSLog(@"Can now use sqlite on multiple threads, using the same connection");
+//    } else {
+//        NSLog(@"setting sqlite thread safe mode to serialized failed!!! return code: %d", err2);
+//    }
 
     if (_maxBusyRetryTimeInterval > 0.0) {
         // set the handler
@@ -1000,6 +1000,12 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     return rs;
 }
 
+- (DataReader *)executeQuery:(NSString*)sql withVAList:(va_list)args {
+    return [self executeQuery:sql withArgumentsInArray:nil orDictionary:nil orVAList:args];
+}
+
+#pragma mark Execute updates
+
 - (BOOL)executeNonQuery:(NSString *)sql withParameters:(NSArray *)arguments {
     
     return [self executeUpdate:sql error:nil withArgumentsInArray:arguments orDictionary:nil orVAList:nil];
@@ -1013,12 +1019,6 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     }
     return result;
 }
-
-- (DataReader *)executeQuery:(NSString*)sql withVAList:(va_list)args {
-    return [self executeQuery:sql withArgumentsInArray:nil orDictionary:nil orVAList:args];
-}
-
-#pragma mark Execute updates
 
 - (BOOL)executeUpdate:(NSString*)sql error:(NSError * _Nullable __autoreleasing *)outErr withArgumentsInArray:(NSArray*)arrayArgs orDictionary:(NSDictionary *)dictionaryArgs orVAList:(va_list)args {
     

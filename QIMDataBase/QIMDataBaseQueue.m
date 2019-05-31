@@ -253,7 +253,7 @@ static const void * const kDispatchQueueSpecificKey = &kDispatchQueueSpecificKey
 }
 
 - (void)syncUsingTransaction:(__attribute__((noescape)) void (^)(QIMDataBase* _Nonnull, BOOL * _Nonnull))block {
-    [self beginTransaction:QIMDBTransactionExclusive withBlock:block];
+    [self beginTransaction:QIMDBTransactionImmediate withBlock:block];
 }
 
 - (NSError*)inSavePoint:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block {
