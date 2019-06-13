@@ -1012,10 +1012,24 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
 }
 
 - (BOOL)executeBulkInsert:(NSString *)sql withParameters:(NSArray *)arguments {
-    BOOL result = NO;
+    BOOL result = YES;
     for (NSInteger i = 0; i < arguments.count; i++) {
         NSArray *array = [arguments objectAtIndex:i];
-        [self executeUpdate:sql error:nil withArgumentsInArray:array orDictionary:nil orVAList:nil];
+        if ([array isKindOfClass:[NSArray class]]) {
+            BOOL success = [self executeUpdate:sql error:nil withArgumentsInArray:array orDictionary:nil orVAList:nil];
+            if (success == NO) {
+                result = success;
+            } else {
+                
+            }
+        } else if ([array isKindOfClass:[NSDictionary class]]) {
+            BOOL success = [self executeUpdate:sql error:nil withArgumentsInArray:nil orDictionary:array orVAList:nil];
+            if (success == NO) {
+                result = success;
+            } else {
+                
+            }
+        }
     }
     return result;
 }
