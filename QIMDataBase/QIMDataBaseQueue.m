@@ -35,9 +35,11 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
  * the queue's dispatch queue, which should not happen and causes a deadlock.
  */
 static const void * const kDispatchQueueSpecificKey = &kDispatchQueueSpecificKey;
+static const void * const kDispatchWriteQueueSpecificKey = &kDispatchWriteQueueSpecificKey;
 
 @interface QIMDataBaseQueue () {
     dispatch_queue_t    _queue;
+    dispatch_queue_t    _writeQueue;
     QIMDataBase         *_db;
 }
 @end
@@ -99,6 +101,9 @@ static const void * const kDispatchQueueSpecificKey = &kDispatchQueueSpecificKey
         
         _queue = dispatch_queue_create([[NSString stringWithFormat:@"qimdb.%@", self] UTF8String], NULL);
         dispatch_queue_set_specific(_queue, kDispatchQueueSpecificKey, (__bridge void *)self, NULL);
+        _writeQueue = dispatch_queue_create([[NSString stringWithFormat:@"qimdb-write.%@", self] UTF8String], NULL);
+        dispatch_queue_set_specific(_writeQueue, kDispatchWriteQueueSpecificKey, (__bridge void *)self, NULL);
+
         _openFlags = openFlags;
         _vfsName = [vfsName copy];
     }
@@ -135,6 +140,10 @@ static const void * const kDispatchQueueSpecificKey = &kDispatchQueueSpecificKey
     if (_queue) {
         QIMDBDispatchQueueRelease(_queue);
         _queue = 0x00;
+    }
+    if (_writeQueue) {
+        QIMDBDispatchQueueRelease(_writeQueue);
+        _writeQueue = 0x00;
     }
 #if ! __has_feature(objc_arc)
     [super dealloc];
@@ -211,7 +220,7 @@ static const void * const kDispatchQueueSpecificKey = &kDispatchQueueSpecificKey
 
 - (void)beginTransaction:(QIMDBTransaction)transaction withBlock:(void (^)(QIMDataBase*db, BOOL *rollback))block {
     QIMDBRetain(self);
-    dispatch_sync(_queue, ^() {
+    dispatch_sync(_writeQueue, ^() {
         
         BOOL shouldRollback = NO;
         
@@ -261,7 +270,7 @@ static const void * const kDispatchQueueSpecificKey = &kDispatchQueueSpecificKey
     static unsigned long savePointIdx = 0;
     __block NSError *err = 0x00;
     QIMDBRetain(self);
-    dispatch_sync(_queue, ^() {
+    dispatch_sync(_writeQueue, ^() {
         
         NSString *name = [NSString stringWithFormat:@"savePoint%ld", savePointIdx++];
         
@@ -304,7 +313,7 @@ static const void * const kDispatchQueueSpecificKey = &kDispatchQueueSpecificKey
     __block NSError *blockError;
     
     QIMDBRetain(self);
-    dispatch_sync(_queue, ^() {
+    dispatch_sync(_writeQueue, ^() {
         result = [self.database checkpoint:mode name:name logFrameCount:logFrameCount checkpointCount:checkpointCount error:&blockError];
     });
     QIMDBRelease(self);

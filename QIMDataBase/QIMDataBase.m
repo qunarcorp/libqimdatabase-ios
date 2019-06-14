@@ -1039,12 +1039,12 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     if (![self databaseExists]) {
         return NO;
     }
-    
+    /*
     if (_isExecutingStatement) {
         [self warnInUse];
         return NO;
     }
-    
+    */
     _isExecutingStatement = YES;
     
     int rc                   = 0x00;
@@ -1254,6 +1254,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     }
     
     _isExecutingStatement = NO;
+    NSLog(@"DB executeUpdate - %d : %@", rc, sql);
     return (rc == SQLITE_DONE || rc == SQLITE_OK);
 }
 
