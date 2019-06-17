@@ -1008,7 +1008,9 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
 
 - (BOOL)executeNonQuery:(NSString *)sql withParameters:(NSArray *)arguments {
     
-    return [self executeUpdate:sql error:nil withArgumentsInArray:arguments orDictionary:nil orVAList:nil];
+    BOOL successed = [self executeUpdate:sql error:nil withArgumentsInArray:arguments orDictionary:nil orVAList:nil];
+    NSLog(@"executeNonQuery: - %d, %@ withParameters:%@", successed, sql, arguments);
+    return successed;
 }
 
 - (BOOL)executeBulkInsert:(NSString *)sql withParameters:(NSArray *)arguments {
