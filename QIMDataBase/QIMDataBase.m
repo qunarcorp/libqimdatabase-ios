@@ -177,7 +177,8 @@ NS_ASSUME_NONNULL_END
     int err = sqlite3_open_v2([self sqlitePath], (sqlite3**)&_db, SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE|SQLITE_OPEN_FULLMUTEX, NULL);
 //    sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
     sqlite3_exec(_db, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
-    
+    int sizeLimit = sqlite3_exec(_db, [@"PRAGMA journal_size_limit = 0;" UTF8String], NULL, NULL, NULL);
+    NSLog(@"sizeLimit : %d", sizeLimit);
     if(err != SQLITE_OK) {
         NSLog(@"error opening!: %d", err);
         return NO;
@@ -225,13 +226,17 @@ NS_ASSUME_NONNULL_END
     }
 //    sqlite3_config(SQLITE_CONFIG_MULTITHREAD);  //开启多线程
     sqlite3_exec(_db, [@"PRAGMA journal_mode = WAL;" UTF8String], NULL, NULL, NULL);
+    int sizeLimit = sqlite3_exec(_db, [@"PRAGMA journal_size_limit = 0;" UTF8String], NULL, NULL, NULL);
+    NSLog(@"sizeLimit2 : %d", sizeLimit);
     NSLog(@"sqlite3_threadsafe : %d", sqlite3_threadsafe());
+    /*
     int err2 = sqlite3_config(SQLITE_CONFIG_SERIALIZED);
     if (err2 == SQLITE_OK) {
         NSLog(@"Can now use sqlite on multiple threads, using the same connection");
     } else {
         NSLog(@"setting sqlite thread safe mode to serialized failed!!! return code: %d", err2);
     }
+    */
     if (_maxBusyRetryTimeInterval > 0.0) {
         // set the handler
         [self setMaxBusyRetryTimeInterval:_maxBusyRetryTimeInterval];
