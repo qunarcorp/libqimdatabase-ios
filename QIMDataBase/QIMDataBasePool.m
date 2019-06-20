@@ -298,7 +298,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
 }
 
 - (void)syncUsingTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block {
-    [self beginTransaction:QIMDBTransactionImmediate withBlock:block];
+    [self beginTransaction:QIMDBTransactionExclusive withBlock:block];
 }
 
 - (NSError*)inSavePoint:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block {
