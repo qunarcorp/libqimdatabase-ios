@@ -39,9 +39,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (atomic, assign, nullable) id delegate;
 
-/** Maximum number of databases to create */
+/** Maximum number of write databases to create */
 
-@property (atomic, assign) NSUInteger maximumNumberOfDatabasesToCreate;
+@property (atomic, assign) NSUInteger maximumNumberOfReadDatabasesToCreate;
+
+/** Maximum number of read databases to create */
+
+@property (atomic, assign) NSUInteger maximumNumberOfWriteDatabasesToCreate;
 
 /** Open flags */
 

@@ -23,11 +23,14 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
 @interface QIMDataBasePool () {
     dispatch_queue_t    _lockQueue;
     
-    NSMutableArray      *_databaseInPool;
-    NSMutableArray      *_databaseOutPool;
+    NSMutableArray      *_readDatabaseInPool;
+    NSMutableArray      *_readDatabaseOutPool;
+    NSMutableArray      *_writeDatabaseInPool;
+    NSMutableArray      *_writeDatabaseOutPool;
 }
 
-- (void)pushDatabaseBackInPool:(QIMDataBase*)db;
+- (void)pushReadDatabaseBackInPool:(QIMDataBase*)db;
+- (void)pushWriteDatabaseBackInPool:(QIMDataBase*)db;
 - (QIMDataBase*)db;
 
 @end
@@ -36,7 +39,8 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
 @implementation QIMDataBasePool
 @synthesize path=_path;
 @synthesize delegate=_delegate;
-@synthesize maximumNumberOfDatabasesToCreate=_maximumNumberOfDatabasesToCreate;
+@synthesize maximumNumberOfReadDatabasesToCreate=_maximumNumberOfReadDatabasesToCreate;
+@synthesize maximumNumberOfWriteDatabasesToCreate=_maximumNumberOfWriteDatabasesToCreate;
 @synthesize openFlags=_openFlags;
 
 
@@ -71,11 +75,14 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     if (self != nil) {
         _path               = [aPath copy];
         _lockQueue          = dispatch_queue_create([[NSString stringWithFormat:@"QIMDB.%@", self] UTF8String], NULL);
-        _databaseInPool     = QIMDBReturnRetained([NSMutableArray array]);
-        _databaseOutPool    = QIMDBReturnRetained([NSMutableArray array]);
+        _readDatabaseInPool     = QIMDBReturnRetained([NSMutableArray array]);
+        _readDatabaseOutPool    = QIMDBReturnRetained([NSMutableArray array]);
+        _writeDatabaseInPool     = QIMDBReturnRetained([NSMutableArray array]);
+        _writeDatabaseOutPool    = QIMDBReturnRetained([NSMutableArray array]);
         _openFlags          = openFlags;
         _vfsName            = [vfsName copy];
-        _maximumNumberOfDatabasesToCreate = 30;
+        _maximumNumberOfReadDatabasesToCreate = 25;
+        _maximumNumberOfWriteDatabasesToCreate = 5;
     }
     
     return self;
@@ -110,8 +117,10 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     
     _delegate = 0x00;
     QIMDBRelease(_path);
-    QIMDBRelease(_databaseInPool);
-    QIMDBRelease(_databaseOutPool);
+    QIMDBRelease(_readDatabaseInPool);
+    QIMDBRelease(_readDatabaseOutPool);
+    QIMDBRelease(_writeDatabaseInPool);
+    QIMDBRelease(_writeDatabaseOutPool);
     QIMDBRelease(_vfsName);
     
     if (_lockQueue) {
@@ -128,7 +137,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     dispatch_sync(_lockQueue, aBlock);
 }
 
-- (void)pushDatabaseBackInPool:(QIMDataBase*)db {
+- (void)pushReadDatabaseBackInPool:(QIMDataBase*)db {
     
     if (!db) { // db can be null if we set an upper bound on the # of databases to create.
         return;
@@ -136,36 +145,52 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     
     [self executeLocked:^() {
         
-        if ([self->_databaseInPool containsObject:db]) {
-            [[NSException exceptionWithName:@"Database already in pool" reason:@"The QIMDataBasebeing put back into the pool is already present in the pool" userInfo:nil] raise];
+        if ([self->_readDatabaseInPool containsObject:db]) {
+            [[NSException exceptionWithName:@"Database already in read pool" reason:@"The QIMDataBasebeing put back into the pool is already present in the read pool" userInfo:nil] raise];
         }
         
-        [self->_databaseInPool addObject:db];
-        [self->_databaseOutPool removeObject:db];
+        [self->_readDatabaseInPool addObject:db];
+        [self->_readDatabaseOutPool removeObject:db];
         
     }];
 }
 
-- (QIMDataBase*)db {
+- (void)pushWriteDatabaseBackInPool:(QIMDataBase*)db {
+    if (!db) { // db can be null if we set an upper bound on the # of databases to create.
+        return;
+    }
     
+    [self executeLocked:^() {
+        
+        if ([self->_writeDatabaseInPool containsObject:db]) {
+            [[NSException exceptionWithName:@"Database already in write pool" reason:@"The QIMDataBasebeing put back into the pool is already present in the write pool" userInfo:nil] raise];
+        }
+        
+        [self->_writeDatabaseInPool addObject:db];
+        [self->_writeDatabaseOutPool removeObject:db];
+        
+    }];
+}
+
+- (QIMDataBase *)writeDb {
     __block QIMDataBase*db;
     
     
     [self executeLocked:^() {
-        db = [self->_databaseInPool lastObject];
+        db = [self->_writeDatabaseInPool lastObject];
         
         BOOL shouldNotifyDelegate = NO;
         
         if (db) {
-            [self->_databaseOutPool addObject:db];
-            [self->_databaseInPool removeLastObject];
+            [self->_writeDatabaseOutPool addObject:db];
+            [self->_writeDatabaseInPool removeLastObject];
         }
         else {
             
-            if (self->_maximumNumberOfDatabasesToCreate) {
-                NSUInteger currentCount = [self->_databaseOutPool count] + [self->_databaseInPool count];
+            if (self->_maximumNumberOfWriteDatabasesToCreate) {
+                NSUInteger currentCount = [self->_writeDatabaseOutPool count] + [self->_writeDatabaseInPool count];
                 
-                if (currentCount >= self->_maximumNumberOfDatabasesToCreate) {
+                if (currentCount >= self->_maximumNumberOfWriteDatabasesToCreate) {
                     NSLog(@"Maximum number of databases (%ld) has already been reached!", (long)currentCount);
                     return;
                 }
@@ -188,8 +213,68 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
             }
             else {
                 //It should not get added in the pool twice if lastObject was found
-                if (![self->_databaseOutPool containsObject:db]) {
-                    [self->_databaseOutPool addObject:db];
+                if (![self->_writeDatabaseOutPool containsObject:db]) {
+                    [self->_writeDatabaseOutPool addObject:db];
+                    
+                    if (shouldNotifyDelegate && [self->_delegate respondsToSelector:@selector(databasePool:didAddDatabase:)]) {
+                        [self->_delegate databasePool:self didAddDatabase:db];
+                    }
+                }
+            }
+        }
+        else {
+            NSLog(@"Could not open up the database at path %@", self->_path);
+            db = 0x00;
+        }
+    }];
+    
+    return db;
+}
+
+- (QIMDataBase*)readDb {
+    
+    __block QIMDataBase*db;
+    
+    
+    [self executeLocked:^() {
+        db = [self->_readDatabaseInPool lastObject];
+        
+        BOOL shouldNotifyDelegate = NO;
+        
+        if (db) {
+            [self->_readDatabaseOutPool addObject:db];
+            [self->_readDatabaseInPool removeLastObject];
+        }
+        else {
+            
+            if (self->_maximumNumberOfReadDatabasesToCreate) {
+                NSUInteger currentCount = [self->_readDatabaseOutPool count] + [self->_readDatabaseInPool count];
+                
+                if (currentCount >= self->_maximumNumberOfReadDatabasesToCreate) {
+                    NSLog(@"Maximum number of databases (%ld) has already been reached!", (long)currentCount);
+                    return;
+                }
+            }
+            
+            db = [[[self class] databaseClass] databaseWithPath:self->_path];
+            shouldNotifyDelegate = YES;
+        }
+        
+        //This ensures that the db is opened before returning
+#if SQLITE_VERSION_NUMBER >= 3005000
+        BOOL success = [db openWithFlags:self->_openFlags vfs:self->_vfsName];
+#else
+        BOOL success = [db open];
+#endif
+        if (success) {
+            if ([self->_delegate respondsToSelector:@selector(databasePool:shouldAddDatabaseToPool:)] && ![self->_delegate databasePool:self shouldAddDatabaseToPool:db]) {
+                [db close];
+                db = 0x00;
+            }
+            else {
+                //It should not get added in the pool twice if lastObject was found
+                if (![self->_readDatabaseOutPool containsObject:db]) {
+                    [self->_readDatabaseOutPool addObject:db];
                     
                     if (shouldNotifyDelegate && [self->_delegate respondsToSelector:@selector(databasePool:didAddDatabase:)]) {
                         [self->_delegate databasePool:self didAddDatabase:db];
@@ -211,7 +296,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     __block NSUInteger count;
     
     [self executeLocked:^() {
-        count = [self->_databaseInPool count];
+        count = [self->_readDatabaseInPool count] + [self->_writeDatabaseInPool count];
     }];
     
     return count;
@@ -222,7 +307,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     __block NSUInteger count;
     
     [self executeLocked:^() {
-        count = [self->_databaseOutPool count];
+        count = [self->_readDatabaseOutPool count] + [self->_writeDatabaseOutPool count];
     }];
     
     return count;
@@ -232,7 +317,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     __block NSUInteger count;
     
     [self executeLocked:^() {
-        count = [self->_databaseOutPool count] + [self->_databaseInPool count];
+        count = [self->_readDatabaseOutPool count] + [self->_readDatabaseInPool count] + [self->_writeDatabaseInPool count] + [self->_writeDatabaseOutPool count];
     }];
     
     return count;
@@ -240,25 +325,27 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
 
 - (void)releaseAllDatabases {
     [self executeLocked:^() {
-        [self->_databaseOutPool removeAllObjects];
-        [self->_databaseInPool removeAllObjects];
+        [self->_readDatabaseOutPool removeAllObjects];
+        [self->_readDatabaseInPool removeAllObjects];
+        [self->_writeDatabaseInPool removeAllObjects];
+        [self->_writeDatabaseOutPool removeAllObjects];
     }];
 }
 
 - (void)inDatabase:(__attribute__((noescape)) void (^)(QIMDataBase*db))block {
     
-    QIMDataBase*db = [self db];
-    
+    QIMDataBase*db = [self readDb];
+    NSLog(@"inDatabase : %@", db);
     block(db);
     
-    [self pushDatabaseBackInPool:db];
+    [self pushReadDatabaseBackInPool:db];
 }
 
 - (void)beginTransaction:(QIMDBTransaction)transaction withBlock:(void (^)(QIMDataBase*db, BOOL *rollback))block {
     
     BOOL shouldRollback = NO;
     
-    QIMDataBase*db = [self db];
+    QIMDataBase*db = [self writeDb];
     NSLog(@"hhhhhhhhhhhhdatabase : %@", db);
     switch (transaction) {
         case QIMDBTransactionExclusive:
@@ -282,7 +369,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
         [db commit];
     }
     
-    [self pushDatabaseBackInPool:db];
+    [self pushWriteDatabaseBackInPool:db];
 }
 
 - (void)inTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block {
@@ -309,12 +396,12 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     
     BOOL shouldRollback = NO;
     
-    QIMDataBase*db = [self db];
+    QIMDataBase*db = [self writeDb];
     
     NSError *err = 0x00;
     
     if (![db startSavePointWithName:name error:&err]) {
-        [self pushDatabaseBackInPool:db];
+        [self pushWriteDatabaseBackInPool:db];
         return err;
     }
     
@@ -326,7 +413,7 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     }
     [db releaseSavePointWithName:name error:&err];
     
-    [self pushDatabaseBackInPool:db];
+    [self pushWriteDatabaseBackInPool:db];
     
     return err;
 #else
