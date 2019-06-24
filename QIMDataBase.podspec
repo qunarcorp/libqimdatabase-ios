@@ -19,5 +19,6 @@ Pod::Spec.new do |s|
 
   s.source_files = 'QIMDataBase/**/*.{h,m,c}'
 #  s.requires_arc = false
+  s.libraries = 'sqlite3.0'
 
 end
