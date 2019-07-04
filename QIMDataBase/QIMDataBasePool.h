@@ -33,27 +33,27 @@ NS_ASSUME_NONNULL_BEGIN
 
 /** Database path */
 
-@property (atomic, copy, nullable) NSString *path;
+@property(atomic, copy, nullable) NSString *path;
 
 /** Delegate object */
 
-@property (atomic, assign, nullable) id delegate;
+@property(atomic, assign, nullable) id delegate;
 
 /** Maximum number of write databases to create */
 
-@property (atomic, assign) NSUInteger maximumNumberOfReadDatabasesToCreate;
+@property(atomic, assign) NSUInteger maximumNumberOfReadDatabasesToCreate;
 
 /** Maximum number of read databases to create */
 
-@property (atomic, assign) NSUInteger maximumNumberOfWriteDatabasesToCreate;
+@property(atomic, assign) NSUInteger maximumNumberOfWriteDatabasesToCreate;
 
 /** Open flags */
 
-@property (atomic, readonly) int openFlags;
+@property(atomic, readonly) int openFlags;
 
 /**  Custom virtual file system name */
 
-@property (atomic, copy, nullable) NSString *vfsName;
+@property(atomic, copy, nullable) NSString *vfsName;
 
 
 ///---------------------
@@ -67,7 +67,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBasePool` object. `nil` on error.
  */
 
-+ (instancetype)databasePoolWithPath:(NSString * _Nullable)aPath;
++ (instancetype)databasePoolWithPath:(NSString *_Nullable)aPath;
 
 /** Create pool using path.
  
@@ -86,7 +86,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBasePool` object. `nil` on error.
  */
 
-+ (instancetype)databasePoolWithURL:(NSURL * _Nullable)url;
++ (instancetype)databasePoolWithURL:(NSURL *_Nullable)url;
 
 /** Create pool using path and specified flags
  
@@ -96,7 +96,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBasePool` object. `nil` on error.
  */
 
-+ (instancetype)databasePoolWithPath:(NSString * _Nullable)aPath flags:(int)openFlags;
++ (instancetype)databasePoolWithPath:(NSString *_Nullable)aPath flags:(int)openFlags;
 
 /** Create pool using file URL and specified flags
  
@@ -106,7 +106,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBasePool` object. `nil` on error.
  */
 
-+ (instancetype)databasePoolWithURL:(NSURL * _Nullable)url flags:(int)openFlags;
++ (instancetype)databasePoolWithURL:(NSURL *_Nullable)url flags:(int)openFlags;
 
 /** Create pool using path.
  
@@ -115,7 +115,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBasePool` object. `nil` on error.
  */
 
-- (instancetype)initWithPath:(NSString * _Nullable)aPath;
+- (instancetype)initWithPath:(NSString *_Nullable)aPath;
 
 /** Create pool using file URL.
  
@@ -124,7 +124,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBasePool` object. `nil` on error.
  */
 
-- (instancetype)initWithURL:(NSURL * _Nullable)url;
+- (instancetype)initWithURL:(NSURL *_Nullable)url;
 
 /** Create pool using path and specified flags.
  
@@ -134,7 +134,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBasePool` object. `nil` on error.
  */
 
-- (instancetype)initWithPath:(NSString * _Nullable)aPath flags:(int)openFlags;
+- (instancetype)initWithPath:(NSString *_Nullable)aPath flags:(int)openFlags;
 
 /** Create pool using file URL and specified flags.
  
@@ -144,7 +144,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBasePool` object. `nil` on error.
  */
 
-- (instancetype)initWithURL:(NSURL * _Nullable)url flags:(int)openFlags;
+- (instancetype)initWithURL:(NSURL *_Nullable)url flags:(int)openFlags;
 
 /** Create pool using path and specified flags.
  
@@ -155,7 +155,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBasePool` object. `nil` on error.
  */
 
-- (instancetype)initWithPath:(NSString * _Nullable)aPath flags:(int)openFlags vfs:(NSString * _Nullable)vfsName;
+- (instancetype)initWithPath:(NSString *_Nullable)aPath flags:(int)openFlags vfs:(NSString *_Nullable)vfsName;
 
 /** Create pool using file URL and specified flags.
  
@@ -166,7 +166,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBasePool` object. `nil` on error.
  */
 
-- (instancetype)initWithURL:(NSURL * _Nullable)url flags:(int)openFlags vfs:(NSString * _Nullable)vfsName;
+- (instancetype)initWithURL:(NSURL *_Nullable)url flags:(int)openFlags vfs:(NSString *_Nullable)vfsName;
 
 /** Returns the Class of 'QIMDataBase' subclass, that will be used to instantiate database object.
  
@@ -184,17 +184,17 @@ NS_ASSUME_NONNULL_BEGIN
 /** Number of checked-in databases in pool
  */
 
-@property (nonatomic, readonly) NSUInteger countOfCheckedInDatabases;
+@property(nonatomic, readonly) NSUInteger countOfCheckedInDatabases;
 
 /** Number of checked-out databases in pool
  */
 
-@property (nonatomic, readonly) NSUInteger countOfCheckedOutDatabases;
+@property(nonatomic, readonly) NSUInteger countOfCheckedOutDatabases;
 
 /** Total number of databases in pool
  */
 
-@property (nonatomic, readonly) NSUInteger countOfOpenDatabases;
+@property(nonatomic, readonly) NSUInteger countOfOpenDatabases;
 
 /** Release all databases in pool */
 
@@ -209,7 +209,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param block The code to be run on the `QIMDataBasePool` pool.
  */
 
-- (void)inDatabase:(__attribute__((noescape)) void (^)(QIMDataBase*db))block;
+- (void)inDatabase:(__attribute__((noescape)) void (^)(QIMDataBase *db))block;
 
 /** Synchronously perform database operations in pool using transaction.
  
@@ -224,28 +224,28 @@ NS_ASSUME_NONNULL_BEGIN
  to make your intent explicit, but also to future-proof your code.
  */
 
-- (void)inTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
+- (void)inTransaction:(__attribute__((noescape)) void (^)(QIMDataBase *db, BOOL *rollback))block;
 
 /** Synchronously perform database operations in pool using exclusive transaction.
  
  @param block The code to be run on the `QIMDataBasePool` pool.
  */
 
-- (void)inExclusiveTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
+- (void)inExclusiveTransaction:(__attribute__((noescape)) void (^)(QIMDataBase *db, BOOL *rollback))block;
 
 /** Synchronously perform database operations in pool using deferred transaction.
  
  @param block The code to be run on the `QIMDataBasePool` pool.
  */
 
-- (void)inDeferredTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
+- (void)inDeferredTransaction:(__attribute__((noescape)) void (^)(QIMDataBase *db, BOOL *rollback))block;
 
 /** Synchronously perform database operations on queue, using immediate transactions.
  
  @param block The code to be run on the queue of `QIMDataBaseQueue`
  */
 
-- (void)syncUsingTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
+- (void)syncUsingTransaction:(__attribute__((noescape)) void (^)(QIMDataBase *db, BOOL *rollback))block;
 
 /** Synchronously perform database operations in pool using save point.
  
@@ -256,7 +256,7 @@ NS_ASSUME_NONNULL_BEGIN
  @warning You can not nest these, since calling it will pull another database out of the pool and you'll get a deadlock. If you need to nest, use `<[QIMDataBasestartSavePointWithName:error:]>` instead.
  */
 
-- (NSError * _Nullable)inSavePoint:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
+- (NSError *_Nullable)inSavePoint:(__attribute__((noescape)) void (^)(QIMDataBase *db, BOOL *rollback))block;
 
 @end
 
@@ -277,7 +277,7 @@ NS_ASSUME_NONNULL_BEGIN
  
  */
 
-- (BOOL)databasePool:(QIMDataBasePool*)pool shouldAddDatabaseToPool:(QIMDataBase*)database;
+- (BOOL)databasePool:(QIMDataBasePool *)pool shouldAddDatabaseToPool:(QIMDataBase *)database;
 
 /** Tells the delegate that database was added to the pool.
  
@@ -286,7 +286,7 @@ NS_ASSUME_NONNULL_BEGIN
  
  */
 
-- (void)databasePool:(QIMDataBasePool*)pool didAddDatabase:(QIMDataBase*)database;
+- (void)databasePool:(QIMDataBasePool *)pool didAddDatabase:(QIMDataBase *)database;
 
 @end
 

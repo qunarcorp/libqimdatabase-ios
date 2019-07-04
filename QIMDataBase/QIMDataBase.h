@@ -4,7 +4,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-#if ! __has_feature(objc_arc)
+#if !__has_feature(objc_arc)
 #define QIMDBAutorelease(__v) ([__v autorelease]);
 #define QIMDBReturnAutoreleased QIMDBAutorelease
 
@@ -42,9 +42,9 @@ NS_ASSUME_NONNULL_BEGIN
 typedef int(^QIMDBExecuteStatementsCallbackBlock)(NSDictionary *resultsDictionary);
 
 typedef NS_ENUM(int, QIMDBCheckpointMode) {
-    QIMDBCheckpointModePassive  = 0, // SQLITE_CHECKPOINT_PASSIVE,
-    QIMDBCheckpointModeFull     = 1, // SQLITE_CHECKPOINT_FULL,
-    QIMDBCheckpointModeRestart  = 2, // SQLITE_CHECKPOINT_RESTART,
+    QIMDBCheckpointModePassive = 0, // SQLITE_CHECKPOINT_PASSIVE,
+    QIMDBCheckpointModeFull = 1, // SQLITE_CHECKPOINT_FULL,
+    QIMDBCheckpointModeRestart = 2, // SQLITE_CHECKPOINT_RESTART,
     QIMDBCheckpointModeTruncate = 3  // SQLITE_CHECKPOINT_TRUNCATE
 };
 
@@ -77,7 +77,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
 #pragma clang diagnostic ignored "-Wobjc-interface-ivars"
 
 
-@interface QIMDataBase: NSObject
+@interface QIMDataBase : NSObject
 
 ///-----------------
 /// @name Properties
@@ -85,23 +85,23 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
 
 /** Whether should trace execution */
 
-@property (atomic, assign) BOOL traceExecution;
+@property(atomic, assign) BOOL traceExecution;
 
 /** Whether checked out or not */
 
-@property (atomic, assign) BOOL checkedOut;
+@property(atomic, assign) BOOL checkedOut;
 
 /** Crash on errors */
 
-@property (atomic, assign) BOOL crashOnErrors;
+@property(atomic, assign) BOOL crashOnErrors;
 
 /** Logs errors */
 
-@property (atomic, assign) BOOL logsErrors;
+@property(atomic, assign) BOOL logsErrors;
 
 /** Dictionary of cached statements */
 
-@property (atomic, retain, nullable) NSMutableDictionary *cachedStatements;
+@property(atomic, retain, nullable) NSMutableDictionary *cachedStatements;
 
 ///---------------------
 /// @name Initialization
@@ -133,7 +133,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-+ (instancetype)databaseWithPath:(NSString * _Nullable)inPath;
++ (instancetype)databaseWithPath:(NSString *_Nullable)inPath;
 
 /** Create a `QIMDataBase` object.
  
@@ -160,7 +160,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-+ (instancetype)databaseWithURL:(NSURL * _Nullable)url;
++ (instancetype)databaseWithURL:(NSURL *_Nullable)url;
 
 /** Initialize a `QIMDataBase` object.
  
@@ -188,7 +188,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-- (instancetype)initWithPath:(NSString * _Nullable)path;
+- (instancetype)initWithPath:(NSString *_Nullable)path;
 
 /** Initialize a `QIMDataBase` object.
  
@@ -215,7 +215,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-- (instancetype)initWithURL:(NSURL * _Nullable)url;
+- (instancetype)initWithURL:(NSURL *_Nullable)url;
 
 ///-----------------------------------
 /// @name Opening and closing database
@@ -223,7 +223,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
 
 /// Is the database open or not?
 
-@property (nonatomic) BOOL isOpen;
+@property(nonatomic) BOOL isOpen;
 
 /** Opening a new database connection
  
@@ -288,7 +288,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @see close
  */
 
-- (BOOL)openWithFlags:(int)flags vfs:(NSString * _Nullable)vfsName;
+- (BOOL)openWithFlags:(int)flags vfs:(NSString *_Nullable)vfsName;
 
 /** Closing a database connection
  
@@ -311,7 +311,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @return `YES` if everything succeeds, `NO` on failure.
  */
 
-@property (nonatomic, readonly) BOOL goodConnection;
+@property(nonatomic, readonly) BOOL goodConnection;
 
 
 ///----------------------
@@ -338,7 +338,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @see [`sqlite3_bind`](http://sqlite.org/c3ref/bind_blob.html)
  */
 
-- (BOOL)executeUpdate:(NSString*)sql withErrorAndBindings:(NSError * _Nullable __autoreleasing *)outErr, ...;
+- (BOOL)executeUpdate:(NSString *)sql withErrorAndBindings:(NSError *_Nullable __autoreleasing *)outErr, ...;
 
 /** Execute single update statement
  
@@ -347,7 +347,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @warning **Deprecated**: Please use `<executeUpdate:withErrorAndBindings>` instead.
  */
 
-- (BOOL)update:(NSString*)sql withErrorAndBindings:(NSError * _Nullable __autoreleasing *)outErr, ...  __deprecated_msg("Use executeUpdate:withErrorAndBindings: instead");;
+- (BOOL)update:(NSString *)sql withErrorAndBindings:(NSError *_Nullable __autoreleasing *)outErr, ...  __deprecated_msg("Use executeUpdate:withErrorAndBindings: instead");;
 
 /** Execute single update statement
  
@@ -371,7 +371,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @note You cannot use this method from Swift due to incompatibilities between Swift and Objective-C variadic implementations. Consider using `<executeUpdate:values:>` instead.
  */
 
-- (BOOL)executeUpdate:(NSString*)sql, ...;
+- (BOOL)executeUpdate:(NSString *)sql, ...;
 
 /** Execute single update statement
  
@@ -399,7 +399,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  There are two reasons why this distinction is important. First, the printf-style escape sequences can only be used where it is permissible to use a SQLite `?` placeholder. You can use it only for values in SQL statements, but not for table names or column names or any other non-value context. This method also cannot be used in conjunction with `pragma` statements and the like. Second, note the lack of quotation marks in the SQL. The `VALUES` clause was _not_ `VALUES ('%@')` (like you might have to do if you built a SQL statement using `NSString` method `stringWithFormat`), but rather simply `VALUES (%@)`.
  */
 
-- (BOOL)executeUpdateWithFormat:(NSString *)format, ... NS_FORMAT_FUNCTION(1,2);
+- (BOOL)executeUpdateWithFormat:(NSString *)format, ... NS_FORMAT_FUNCTION(1, 2);
 
 /** Execute single update statement
  
@@ -419,7 +419,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @see lastErrorMessage
  */
 
-- (BOOL)executeUpdate:(NSString*)sql withArgumentsInArray:(NSArray *)arguments;
+- (BOOL)executeUpdate:(NSString *)sql withArgumentsInArray:(NSArray *)arguments;
 
 /** Execute single update statement
  
@@ -447,7 +447,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-- (BOOL)executeUpdate:(NSString*)sql values:(NSArray * _Nullable)values error:(NSError * _Nullable __autoreleasing *)error;
+- (BOOL)executeUpdate:(NSString *)sql values:(NSArray *_Nullable)values error:(NSError *_Nullable __autoreleasing *)error;
 
 /** Execute single update statement
  
@@ -466,7 +466,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @see lastErrorMessage
  */
 
-- (BOOL)executeUpdate:(NSString*)sql withParameterDictionary:(NSDictionary *)arguments;
+- (BOOL)executeUpdate:(NSString *)sql withParameterDictionary:(NSDictionary *)arguments;
 
 
 /** Execute single update statement
@@ -486,7 +486,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @see lastErrorMessage
  */
 
-- (BOOL)executeUpdate:(NSString*)sql withVAList: (va_list)args;
+- (BOOL)executeUpdate:(NSString *)sql withVAList:(va_list)args;
 
 /** Execute multiple SQL statements
  
@@ -535,7 +535,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-@property (nonatomic, readonly) int64_t lastInsertRowId;
+@property(nonatomic, readonly) int64_t lastInsertRowId;
 
 /** The number of rows changed by prior SQL statement.
  
@@ -547,7 +547,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-@property (nonatomic, readonly) int changes;
+@property(nonatomic, readonly) int changes;
 
 
 ///-------------------------
@@ -575,7 +575,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @note You cannot use this method from Swift due to incompatibilities between Swift and Objective-C variadic implementations. Consider using `<executeQuery:values:>` instead.
  */
 
-- (DataReader * _Nullable)executeQuery:(NSString*)sql, ...;
+- (DataReader *_Nullable)executeQuery:(NSString *)sql, ...;
 
 /** Execute select statement
  
@@ -605,7 +605,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-- (DataReader * _Nullable)executeQueryWithFormat:(NSString*)format, ... NS_FORMAT_FUNCTION(1,2);
+- (DataReader *_Nullable)executeQueryWithFormat:(NSString *)format, ... NS_FORMAT_FUNCTION(1, 2);
 
 /** Execute select statement
  
@@ -624,7 +624,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @see [`DataReader next`](<[DataReader next]>)
  */
 
-- (DataReader * _Nullable)executeReader:(NSString *)sql withParameters:(NSArray *)arguments;
+- (DataReader *_Nullable)executeReader:(NSString *)sql withParameters:(NSArray *)arguments;
 
 /** Execute select statement
  
@@ -653,7 +653,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-- (DataReader * _Nullable)executeQuery:(NSString *)sql values:(NSArray * _Nullable)values error:(NSError * _Nullable __autoreleasing *)error;
+- (DataReader *_Nullable)executeQuery:(NSString *)sql values:(NSArray *_Nullable)values error:(NSError *_Nullable __autoreleasing *)error;
 
 /** Execute select statement
  
@@ -671,7 +671,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @see [`DataReader next`](<[DataReader next]>)
  */
 
-- (DataReader * _Nullable)executeQuery:(NSString *)sql withParameterDictionary:(NSDictionary * _Nullable)arguments;
+- (DataReader *_Nullable)executeQuery:(NSString *)sql withParameterDictionary:(NSDictionary *_Nullable)arguments;
 
 
 - (BOOL)executeNonQuery:(NSString *)sql withParameters:(NSArray *)arguments;
@@ -679,7 +679,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
 - (BOOL)executeBulkInsert:(NSString *)sql withParameters:(NSArray *)params;
 
 // Documentation forthcoming.
-- (DataReader * _Nullable)executeQuery:(NSString *)sql withVAList:(va_list)args;
+- (DataReader *_Nullable)executeQuery:(NSString *)sql withVAList:(va_list)args;
 
 ///-------------------
 /// @name Transactions
@@ -778,7 +778,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @see rollback
  */
 
-@property (nonatomic, readonly) BOOL isInTransaction;
+@property(nonatomic, readonly) BOOL isInTransaction;
 
 - (BOOL)inTransaction __deprecated_msg("Use isInTransaction property instead");
 
@@ -800,12 +800,12 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @return `YES` if there are open result sets; `NO` if not.
  */
 
-@property (nonatomic, readonly) BOOL hasOpenResultSets;
+@property(nonatomic, readonly) BOOL hasOpenResultSets;
 
 /** Whether should cache statements or not
  */
 
-@property (nonatomic) BOOL shouldCacheStatements;
+@property(nonatomic) BOOL shouldCacheStatements;
 
 /** Interupt pending database operation
  
@@ -832,7 +832,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @warning You need to have purchased the sqlite encryption extensions for this method to work.
  */
 
-- (BOOL)setKey:(NSString*)key;
+- (BOOL)setKey:(NSString *)key;
 
 /** Reset encryption key
  
@@ -845,7 +845,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @warning You need to have purchased the sqlite encryption extensions for this method to work.
  */
 
-- (BOOL)rekey:(NSString*)key;
+- (BOOL)rekey:(NSString *)key;
 
 /** Set encryption key using `keyData`.
  
@@ -881,12 +881,12 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
 /** The path of the database file
  */
 
-@property (nonatomic, readonly, nullable) NSString *databasePath;
+@property(nonatomic, readonly, nullable) NSString *databasePath;
 
 /** The file URL of the database file.
  */
 
-@property (nonatomic, readonly, nullable) NSURL *databaseURL;
+@property(nonatomic, readonly, nullable) NSURL *databaseURL;
 
 /** The underlying SQLite handle
  
@@ -894,7 +894,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-@property (nonatomic, readonly) void *sqliteHandle;
+@property(nonatomic, readonly) void *sqliteHandle;
 
 
 ///-----------------------------
@@ -913,7 +913,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-- (NSString*)lastErrorMessage;
+- (NSString *)lastErrorMessage;
 
 /** Last error code
  
@@ -970,7 +970,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
 
 
 // description forthcoming
-@property (nonatomic) NSTimeInterval maxBusyRetryTimeInterval;
+@property(nonatomic) NSTimeInterval maxBusyRetryTimeInterval;
 
 
 ///------------------
@@ -989,7 +989,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @see rollbackToSavePointWithName:error:
  */
 
-- (BOOL)startSavePointWithName:(NSString*)name error:(NSError * _Nullable __autoreleasing *)outErr;
+- (BOOL)startSavePointWithName:(NSString *)name error:(NSError *_Nullable __autoreleasing *)outErr;
 
 /** Release save point
  
@@ -1004,7 +1004,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-- (BOOL)releaseSavePointWithName:(NSString*)name error:(NSError * _Nullable __autoreleasing *)outErr;
+- (BOOL)releaseSavePointWithName:(NSString *)name error:(NSError *_Nullable __autoreleasing *)outErr;
 
 /** Roll back to save point
  
@@ -1018,7 +1018,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-- (BOOL)rollbackToSavePointWithName:(NSString*)name error:(NSError * _Nullable __autoreleasing *)outErr;
+- (BOOL)rollbackToSavePointWithName:(NSString *)name error:(NSError *_Nullable __autoreleasing *)outErr;
 
 /** Start save point
  
@@ -1032,7 +1032,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  
  */
 
-- (NSError * _Nullable)inSavePoint:(__attribute__((noescape)) void (^)(BOOL *rollback))block;
+- (NSError *_Nullable)inSavePoint:(__attribute__((noescape)) void (^)(BOOL *rollback))block;
 
 
 ///-----------------
@@ -1045,7 +1045,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @param error The NSError corresponding to the error, if any.
  @return YES on success, otherwise NO.
  */
-- (BOOL)checkpoint:(QIMDBCheckpointMode)checkpointMode error:(NSError * _Nullable *)error;
+- (BOOL)checkpoint:(QIMDBCheckpointMode)checkpointMode error:(NSError *_Nullable *)error;
 
 /** Performs a WAL checkpoint
  
@@ -1054,7 +1054,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @param error The NSError corresponding to the error, if any.
  @return YES on success, otherwise NO.
  */
-- (BOOL)checkpoint:(QIMDBCheckpointMode)checkpointMode name:(NSString * _Nullable)name error:(NSError * _Nullable *)error;
+- (BOOL)checkpoint:(QIMDBCheckpointMode)checkpointMode name:(NSString *_Nullable)name error:(NSError *_Nullable *)error;
 
 /** Performs a WAL checkpoint
  
@@ -1065,7 +1065,7 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @param checkpointCount If not NULL, then this is set to the total number of checkpointed frames in the log file (including any that were already checkpointed before the function was called) or to -1 if the checkpoint could not run due to an error or because the database is not in WAL mode.
  @return YES on success, otherwise NO.
  */
-- (BOOL)checkpoint:(QIMDBCheckpointMode)checkpointMode name:(NSString * _Nullable)name logFrameCount:(int * _Nullable)logFrameCount checkpointCount:(int * _Nullable)checkpointCount error:(NSError * _Nullable *)error;
+- (BOOL)checkpoint:(QIMDBCheckpointMode)checkpointMode name:(NSString *_Nullable)name logFrameCount:(int *_Nullable)logFrameCount checkpointCount:(int *_Nullable)checkpointCount error:(NSError *_Nullable *)error;
 
 ///----------------------------
 /// @name SQLite library status
@@ -1087,10 +1087,10 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @see [sqlite3_libversion()](http://sqlite.org/c3ref/libversion.html)
  */
 
-+ (NSString*)sqliteLibVersion;
++ (NSString *)sqliteLibVersion;
 
 
-+ (NSString*)QIMDBUserVersion;
++ (NSString *)QIMDBUserVersion;
 
 + (SInt32)QIMDBVersion;
 
@@ -1130,16 +1130,16 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
  @see [sqlite3_create_function()](http://sqlite.org/c3ref/create_function.html)
  */
 
-- (void)makeFunctionNamed:(NSString *)name arguments:(int)arguments block:(void (^)(void *context, int argc, void * _Nonnull * _Nonnull argv))block;
+- (void)makeFunctionNamed:(NSString *)name arguments:(int)arguments block:(void (^)(void *context, int argc, void *_Nonnull *_Nonnull argv))block;
 
-- (void)makeFunctionNamed:(NSString *)name maximumArguments:(int)count withBlock:(void (^)(void *context, int argc, void * _Nonnull * _Nonnull argv))block __deprecated_msg("Use makeFunctionNamed:arguments:block:");
+- (void)makeFunctionNamed:(NSString *)name maximumArguments:(int)count withBlock:(void (^)(void *context, int argc, void *_Nonnull *_Nonnull argv))block __deprecated_msg("Use makeFunctionNamed:arguments:block:");
 
 typedef NS_ENUM(int, SqliteValueType) {
     SqliteValueTypeInteger = 1,
-    SqliteValueTypeFloat   = 2,
-    SqliteValueTypeText    = 3,
-    SqliteValueTypeBlob    = 4,
-    SqliteValueTypeNull    = 5
+    SqliteValueTypeFloat = 2,
+    SqliteValueTypeText = 3,
+    SqliteValueTypeBlob = 4,
+    SqliteValueTypeNull = 5
 };
 
 - (SqliteValueType)valueType:(void *)argv;
@@ -1182,7 +1182,7 @@ typedef NS_ENUM(int, SqliteValueType) {
  
  @see makeFunctionNamed:arguments:block:
  */
-- (NSData * _Nullable)valueData:(void *)value;
+- (NSData *_Nullable)valueData:(void *)value;
 
 /**
  Get string value of parameter in custom function.
@@ -1192,7 +1192,7 @@ typedef NS_ENUM(int, SqliteValueType) {
  
  @see makeFunctionNamed:arguments:block:
  */
-- (NSString * _Nullable)valueString:(void *)value;
+- (NSString *_Nullable)valueString:(void *)value;
 
 /**
  Return null value from custom function.
@@ -1211,7 +1211,7 @@ typedef NS_ENUM(int, SqliteValueType) {
  
  @see makeFunctionNamed:arguments:block:
  */
-- (void)resultInt:(int) value context:(void *)context;
+- (void)resultInt:(int)value context:(void *)context;
 
 /**
  Return long value from custom function.
@@ -1345,7 +1345,7 @@ typedef NS_ENUM(int, SqliteValueType) {
  @warning Note there is no direct getter for the `NSDateFormatter`, and you should not use the formatter you pass to QIMDB for other purposes, as `NSDateFormatter` is not thread-safe.
  */
 
-- (void)setDateFormat:(NSDateFormatter * _Nullable)format;
+- (void)setDateFormat:(NSDateFormatter *_Nullable)format;
 
 /** Convert the supplied NSString to NSDate, using the current database formatter.
  
@@ -1360,7 +1360,7 @@ typedef NS_ENUM(int, SqliteValueType) {
  @see storeableDateFormat:
  */
 
-- (NSDate * _Nullable)dateFromString:(NSString *)s;
+- (NSDate *_Nullable)dateFromString:(NSString *)s;
 
 /** Convert the supplied NSDate to NSString, using the current database formatter.
  
@@ -1375,7 +1375,7 @@ typedef NS_ENUM(int, SqliteValueType) {
  @see storeableDateFormat:
  */
 
-- (NSString * _Nullable)stringFromDate:(NSDate *)date;
+- (NSString *_Nullable)stringFromDate:(NSDate *)date;
 
 @end
 
@@ -1404,22 +1404,22 @@ typedef NS_ENUM(int, SqliteValueType) {
 
 /** Usage count */
 
-@property (atomic, assign) long useCount;
+@property(atomic, assign) long useCount;
 
 /** SQL statement */
 
-@property (atomic, retain) NSString *query;
+@property(atomic, retain) NSString *query;
 
 /** SQLite sqlite3_stmt
  
  @see [`sqlite3_stmt`](http://www.sqlite.org/c3ref/stmt.html)
  */
 
-@property (atomic, assign) void *statement;
+@property(atomic, assign) void *statement;
 
 /** Indication of whether the statement is in use */
 
-@property (atomic, assign) BOOL inUse;
+@property(atomic, assign) BOOL inUse;
 
 ///----------------------------
 /// @name Closing and Resetting

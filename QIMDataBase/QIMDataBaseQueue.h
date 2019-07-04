@@ -64,15 +64,15 @@ NS_ASSUME_NONNULL_BEGIN
 @interface QIMDataBaseQueue : NSObject
 /** Path of database */
 
-@property (atomic, retain, nullable) NSString *path;
+@property(atomic, retain, nullable) NSString *path;
 
 /** Open flags */
 
-@property (atomic, readonly) int openFlags;
+@property(atomic, readonly) int openFlags;
 
 /**  Custom virtual file system name */
 
-@property (atomic, copy, nullable) NSString *vfsName;
+@property(atomic, copy, nullable) NSString *vfsName;
 
 ///----------------------------------------------------
 /// @name Initialization, opening, and closing of queue
@@ -85,7 +85,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBaseQueue` object. `nil` on error.
  */
 
-+ (nullable instancetype)databaseQueueWithPath:(NSString * _Nullable)aPath;
++ (nullable instancetype)databaseQueueWithPath:(NSString *_Nullable)aPath;
 
 /** Create queue using file URL.
  
@@ -94,7 +94,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBaseQueue` object. `nil` on error.
  */
 
-+ (nullable instancetype)databaseQueueWithURL:(NSURL * _Nullable)url;
++ (nullable instancetype)databaseQueueWithURL:(NSURL *_Nullable)url;
 
 /** Create queue using path and specified flags.
  
@@ -103,7 +103,7 @@ NS_ASSUME_NONNULL_BEGIN
  
  @return The `QIMDataBaseQueue` object. `nil` on error.
  */
-+ (nullable instancetype)databaseQueueWithPath:(NSString * _Nullable)aPath flags:(int)openFlags;
++ (nullable instancetype)databaseQueueWithPath:(NSString *_Nullable)aPath flags:(int)openFlags;
 
 /** Create queue using file URL and specified flags.
  
@@ -112,7 +112,7 @@ NS_ASSUME_NONNULL_BEGIN
  
  @return The `QIMDataBaseQueue` object. `nil` on error.
  */
-+ (nullable instancetype)databaseQueueWithURL:(NSURL * _Nullable)url flags:(int)openFlags;
++ (nullable instancetype)databaseQueueWithURL:(NSURL *_Nullable)url flags:(int)openFlags;
 
 /** Create queue using path.
  
@@ -121,7 +121,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBaseQueue` object. `nil` on error.
  */
 
-- (nullable instancetype)initWithPath:(NSString * _Nullable)aPath;
+- (nullable instancetype)initWithPath:(NSString *_Nullable)aPath;
 
 /** Create queue using file URL.
  
@@ -130,7 +130,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBaseQueue` object. `nil` on error.
  */
 
-- (nullable instancetype)initWithURL:(NSURL * _Nullable)url;
+- (nullable instancetype)initWithURL:(NSURL *_Nullable)url;
 
 /** Create queue using path and specified flags.
  
@@ -140,7 +140,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBaseQueue` object. `nil` on error.
  */
 
-- (nullable instancetype)initWithPath:(NSString * _Nullable)aPath flags:(int)openFlags;
+- (nullable instancetype)initWithPath:(NSString *_Nullable)aPath flags:(int)openFlags;
 
 /** Create queue using file URL and specified flags.
  
@@ -150,7 +150,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBaseQueue` object. `nil` on error.
  */
 
-- (nullable instancetype)initWithURL:(NSURL * _Nullable)url flags:(int)openFlags;
+- (nullable instancetype)initWithURL:(NSURL *_Nullable)url flags:(int)openFlags;
 
 /** Create queue using path and specified flags.
  
@@ -161,7 +161,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBaseQueue` object. `nil` on error.
  */
 
-- (nullable instancetype)initWithPath:(NSString * _Nullable)aPath flags:(int)openFlags vfs:(NSString * _Nullable)vfsName;
+- (nullable instancetype)initWithPath:(NSString *_Nullable)aPath flags:(int)openFlags vfs:(NSString *_Nullable)vfsName;
 
 /** Create queue using file URL and specified flags.
  
@@ -172,7 +172,7 @@ NS_ASSUME_NONNULL_BEGIN
  @return The `QIMDataBaseQueue` object. `nil` on error.
  */
 
-- (nullable instancetype)initWithURL:(NSURL * _Nullable)url flags:(int)openFlags vfs:(NSString * _Nullable)vfsName;
+- (nullable instancetype)initWithURL:(NSURL *_Nullable)url flags:(int)openFlags vfs:(NSString *_Nullable)vfsName;
 
 /** Returns the Class of 'QIMDataBase' subclass, that will be used to instantiate database object.
  
@@ -200,7 +200,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param block The code to be run on the queue of `QIMDataBaseQueue`
  */
 
-- (void)inDatabase:(__attribute__((noescape)) void (^)(QIMDataBase*db))block;
+- (void)inDatabase:(__attribute__((noescape)) void (^)(QIMDataBase *db))block;
 
 /** Synchronously perform database operations on queue, using transactions.
  
@@ -216,28 +216,28 @@ NS_ASSUME_NONNULL_BEGIN
  
  */
 
-- (void)inTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
+- (void)inTransaction:(__attribute__((noescape)) void (^)(QIMDataBase *db, BOOL *rollback))block;
 
 /** Synchronously perform database operations on queue, using deferred transactions.
  
  @param block The code to be run on the queue of `QIMDataBaseQueue`
  */
 
-- (void)inDeferredTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
+- (void)inDeferredTransaction:(__attribute__((noescape)) void (^)(QIMDataBase *db, BOOL *rollback))block;
 
 /** Synchronously perform database operations on queue, using exclusive transactions.
  
  @param block The code to be run on the queue of `QIMDataBaseQueue`
  */
 
-- (void)inExclusiveTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
+- (void)inExclusiveTransaction:(__attribute__((noescape)) void (^)(QIMDataBase *db, BOOL *rollback))block;
 
 /** Synchronously perform database operations on queue, using immediate transactions.
  
  @param block The code to be run on the queue of `QIMDataBaseQueue`
  */
 
-- (void)syncUsingTransaction:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
+- (void)syncUsingTransaction:(__attribute__((noescape)) void (^)(QIMDataBase *db, BOOL *rollback))block;
 
 ///-----------------------------------------------
 /// @name Dispatching database operations to queue
@@ -250,7 +250,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 // NOTE: you can not nest these, since calling it will pull another database out of the pool and you'll get a deadlock.
 // If you need to nest, use QIMDataBase's startSavePointWithName:error: instead.
-- (NSError * _Nullable)inSavePoint:(__attribute__((noescape)) void (^)(QIMDataBase*db, BOOL *rollback))block;
+- (NSError *_Nullable)inSavePoint:(__attribute__((noescape)) void (^)(QIMDataBase *db, BOOL *rollback))block;
 
 ///-----------------
 /// @name Checkpoint
@@ -262,7 +262,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param error The NSError corresponding to the error, if any.
  @return YES on success, otherwise NO.
  */
-- (BOOL)checkpoint:(QIMDBCheckpointMode)checkpointMode error:(NSError * _Nullable *)error;
+- (BOOL)checkpoint:(QIMDBCheckpointMode)checkpointMode error:(NSError *_Nullable *)error;
 
 /** Performs a WAL checkpoint
  
@@ -271,7 +271,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param error The NSError corresponding to the error, if any.
  @return YES on success, otherwise NO.
  */
-- (BOOL)checkpoint:(QIMDBCheckpointMode)checkpointMode name:(NSString * _Nullable)name error:(NSError * _Nullable *)error;
+- (BOOL)checkpoint:(QIMDBCheckpointMode)checkpointMode name:(NSString *_Nullable)name error:(NSError *_Nullable *)error;
 
 /** Performs a WAL checkpoint
  
@@ -282,7 +282,7 @@ NS_ASSUME_NONNULL_BEGIN
  @param checkpointCount If not NULL, then this is set to the total number of checkpointed frames in the log file (including any that were already checkpointed before the function was called) or to -1 if the checkpoint could not run due to an error or because the database is not in WAL mode.
  @return YES on success, otherwise NO.
  */
-- (BOOL)checkpoint:(QIMDBCheckpointMode)checkpointMode name:(NSString * _Nullable)name logFrameCount:(int * _Nullable)logFrameCount checkpointCount:(int * _Nullable)checkpointCount error:(NSError * _Nullable *)error;
+- (BOOL)checkpoint:(QIMDBCheckpointMode)checkpointMode name:(NSString *_Nullable)name logFrameCount:(int *_Nullable)logFrameCount checkpointCount:(int *_Nullable)checkpointCount error:(NSError *_Nullable *)error;
 
 @end
 
