@@ -3,7 +3,7 @@ Pod::Spec.new do |s|
 
 
   s.name         = "QIMDataBase"
-  s.version      = "2.0.2"
+  s.version      = "3.0.10211613"
   s.summary      = "Qunar chat App 6.0+ version QIMKitVendor"
 
   s.description  = <<-DESC
@@ -18,6 +18,7 @@ Pod::Spec.new do |s|
   s.ios.deployment_target   = '9.0'
 
   s.source_files = 'QIMDataBase/**/*.{h,m,c}'
-  s.requires_arc = false
-  
+#  s.requires_arc = false
+  s.libraries = 'sqlite3.0'
+
 end
