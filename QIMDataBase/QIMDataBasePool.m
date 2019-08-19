@@ -333,7 +333,6 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
 - (void)inDatabase:(__attribute__((noescape)) void (^)(QIMDataBase *db))block {
 
     QIMDataBase *db = [self readDb];
-    NSLog(@"inDatabase : %@", db);
     block(db);
 
     [self pushReadDatabaseBackInPool:db];
@@ -344,7 +343,6 @@ typedef NS_ENUM(NSInteger, QIMDBTransaction) {
     BOOL shouldRollback = NO;
 
     QIMDataBase *db = [self writeDb];
-    NSLog(@"hhhhhhhhhhhhdatabase : %@", db);
     switch (transaction) {
         case QIMDBTransactionExclusive:
             [db beginTransaction];

@@ -980,7 +980,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
 - (BOOL)executeNonQuery:(NSString *)sql withParameters:(NSArray *)arguments {
 
     BOOL successed = [self executeUpdate:sql error:nil withArgumentsInArray:arguments orDictionary:nil orVAList:nil];
-    NSLog(@"executeNonQuery: - %@, %@ withParameters:%@", (successed == YES) ? @"成功" : @"失败", sql, arguments);
+    NSLog(@"executeNonQuery: - %@, %@", (successed == YES) ? @"成功" : @"失败", sql);
     return successed;
 }
 
@@ -1004,7 +1004,7 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
             }
         }
     }
-    NSLog(@"executeBulkInsert: - %@, %@ withParameters: %@", (result == YES) ? @"成功" : @"失败", sql, arguments);
+    NSLog(@"executeBulkInsert: - %@, %@", (result == YES) ? @"成功" : @"失败", sql);
     return result;
 }
 
