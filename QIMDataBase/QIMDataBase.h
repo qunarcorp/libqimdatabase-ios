@@ -673,6 +673,8 @@ typedef NS_ENUM(int, QIMDBCheckpointMode) {
 
 - (DataReader *_Nullable)executeQuery:(NSString *)sql withParameterDictionary:(NSDictionary *_Nullable)arguments;
 
+- (BOOL) checkExistsOnTable:(NSString*) tableName withColumn:(NSString *) columnName;
+
 
 - (BOOL)executeNonQuery:(NSString *)sql withParameters:(NSArray *)arguments;
 

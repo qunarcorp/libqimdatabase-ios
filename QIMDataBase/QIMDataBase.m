@@ -975,6 +975,11 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     return [self executeQuery:sql withArgumentsInArray:nil orDictionary:nil orVAList:args];
 }
 
+- (BOOL) checkExistsOnTable:(NSString*) tableName withColumn:(NSString *) columnName {
+    NSString *sql = [NSString stringWithFormat:@"select %@ from %@;", columnName, tableName];
+    return [self executeNonQuery:sql withParameters:nil];
+}
+
 #pragma mark Execute updates
 
 - (BOOL)executeNonQuery:(NSString *)sql withParameters:(NSArray *)arguments {
