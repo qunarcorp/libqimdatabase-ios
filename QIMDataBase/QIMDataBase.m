@@ -975,9 +975,63 @@ static int QIMDBDatabaseBusyHandler(void *f, int count) {
     return [self executeQuery:sql withArgumentsInArray:nil orDictionary:nil orVAList:args];
 }
 
-- (BOOL) checkExistsOnTable:(NSString*) tableName withColumn:(NSString *) columnName {
-    NSString *sql = [NSString stringWithFormat:@"select %@ from %@;", columnName, tableName];
-    return [self executeNonQuery:sql withParameters:nil];
+//check if table exist in database (patch from OZLB)
+- (BOOL)tableExists:(NSString*)tableName {
+    
+    BOOL returnBool;
+    //lower case table name
+    tableName = [tableName lowercaseString];
+    //search in sqlite_master table if table exists
+    DataReader *rs = [self executeQuery:@"select [sql] from sqlite_master where [type] = 'table' and lower(name) = ?", tableName];
+    //if at least one next exists, table exists
+    returnBool = [rs read];
+    //close and free object
+    [rs close];
+    
+    return returnBool;
+}
+
+//get table with list of tables: result colums: type[STRING], name[STRING],tbl_name[STRING],rootpage[INTEGER],sql[STRING]
+//check if table exist in database  (patch from OZLB)
+- (DataReader *)getSchema {
+    
+    //result colums: type[STRING], name[STRING],tbl_name[STRING],rootpage[INTEGER],sql[STRING]
+    DataReader *rs = [self executeQuery:@"SELECT type, name, tbl_name, rootpage, sql FROM (SELECT * FROM sqlite_master UNION ALL SELECT * FROM sqlite_temp_master) WHERE type != 'meta' AND name NOT LIKE 'sqlite_%' ORDER BY tbl_name, type DESC, name"];
+    
+    return rs;
+}
+
+//get table schema: result colums: cid[INTEGER], name,type [STRING], notnull[INTEGER], dflt_value[],pk[INTEGER]
+- (DataReader *)getTableSchema:(NSString*)tableName {
+    
+    //result colums: cid[INTEGER], name,type [STRING], notnull[INTEGER], dflt_value[],pk[INTEGER]
+    DataReader *rs = [self executeQuery:[NSString stringWithFormat: @"PRAGMA table_info(%@)", tableName]];
+    
+    return rs;
+}
+
+
+//check if column exist in table
+- (BOOL)columnExists:(NSString*)tableName columnName:(NSString*)columnName {
+    
+    BOOL returnBool = NO;
+    //lower case table name
+    tableName = [tableName lowercaseString];
+    //lower case column name
+    columnName = [columnName lowercaseString];
+    //get table schema
+    DataReader *rs = [self getTableSchema: tableName];
+    //check if column is present in table schema
+    while ([rs read]) {
+        if ([[[rs stringForColumn:@"name"] lowercaseString] isEqualToString: columnName]) {
+            returnBool = YES;
+            break;
+        }
+    }
+    //close and free object
+    [rs close];
+    
+    return returnBool;
 }
 
 #pragma mark Execute updates
