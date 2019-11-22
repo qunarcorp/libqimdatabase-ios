@@ -14,19 +14,19 @@ NS_ASSUME_NONNULL_BEGIN
 #endif
 #endif
 
-@class QIMDataBase;
-@class QIMDBStatement;
+@class STIMDataBase;
+@class STIMDBStatement;
 
-/** Represents the results of executing a query on an `<QIMDataBase>`.
+/** Represents the results of executing a query on an `<STIMDataBase>`.
  
  ### See also
  
- - `<QIMDataBase>`
+ - `<STIMDataBase>`
  */
 
 @interface DataReader : NSObject
 
-@property(nonatomic, retain, nullable) QIMDataBase *parentDB;
+@property(nonatomic, retain, nullable) STIMDataBase *parentDB;
 
 ///-----------------
 /// @name Properties
@@ -40,24 +40,24 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property(readonly) NSMutableDictionary *columnNameToIndexMap;
 
-/** `QIMDBStatement` used by result set. */
+/** `STIMDBStatement` used by result set. */
 
-@property(atomic, retain, nullable) QIMDBStatement *statement;
+@property(atomic, retain, nullable) STIMDBStatement *statement;
 
 ///------------------------------------
 /// @name Creating and closing a result set
 ///------------------------------------
 
-/** Create result set from `<QIMDBStatement>`
+/** Create result set from `<STIMDBStatement>`
  
- @param statement A `<QIMDBStatement>` to be performed
+ @param statement A `<STIMDBStatement>` to be performed
  
- @param aDB A `<QIMDataBase>` to be used
+ @param aDB A `<STIMDataBase>` to be used
  
  @return A `DataReader` on success; `nil` on failure
  */
 
-+ (instancetype)resultSetWithStatement:(QIMDBStatement *)statement usingParentDatabase:(QIMDataBase *)aDB;
++ (instancetype)resultSetWithStatement:(STIMDBStatement *)statement usingParentDatabase:(STIMDataBase *)aDB;
 
 /** Close result set */
 

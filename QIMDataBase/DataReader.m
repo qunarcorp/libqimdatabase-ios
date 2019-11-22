@@ -1,8 +1,8 @@
 #import "DataReader.h"
-#import "QIMDataBase.h"
+#import "STIMDataBase.h"
 #import <unistd.h>
 
-#if QIMDB_SQLITE_STANDALONE
+#if STIMDB_SQLITE_STANDALONE
 #import <sqlite3/sqlite3.h>
 #else
 
@@ -10,7 +10,7 @@
 
 #endif
 
-@interface QIMDataBase ()
+@interface STIMDataBase ()
 - (void)resultSetDidClose:(DataReader *)resultSet;
 @end
 
@@ -21,7 +21,7 @@
 
 @implementation DataReader
 
-+ (instancetype)resultSetWithStatement:(QIMDBStatement *)statement usingParentDatabase:(QIMDataBase *)aDB {
++ (instancetype)resultSetWithStatement:(STIMDBStatement *)statement usingParentDatabase:(STIMDataBase *)aDB {
 
     DataReader *rs = [[DataReader alloc] init];
 
@@ -31,7 +31,7 @@
     NSParameterAssert(![statement inUse]);
     [statement setInUse:YES]; // weak reference
 
-    return QIMDBReturnAutoreleased(rs);
+    return STIMDBReturnAutoreleased(rs);
 }
 
 #if !__has_feature(objc_arc)
@@ -44,10 +44,10 @@
 - (void)dealloc {
     [self close];
 
-    QIMDBRelease(_query);
+    STIMDBRelease(_query);
     _query = nil;
 
-    QIMDBRelease(_columnNameToIndexMap);
+    STIMDBRelease(_columnNameToIndexMap);
     _columnNameToIndexMap = nil;
 
 #if !__has_feature(objc_arc)
@@ -57,7 +57,7 @@
 
 - (void)close {
     [_statement reset];
-    QIMDBRelease(_statement);
+    STIMDBRelease(_statement);
     _statement = nil;
 
     // we don't need this anymore... (i think)
@@ -118,7 +118,7 @@
             [dict setObject:objectValue forKey:columnName];
         }
 
-        return QIMDBReturnAutoreleased([dict copy]);
+        return STIMDBReturnAutoreleased([dict copy]);
     } else {
         NSLog(@"Warning: There seem to be no columns in this set.");
     }
@@ -185,7 +185,7 @@
                 // If 'next' or 'nextWithError' is called after the result set is closed,
                 // we need to return the appropriate error.
                 NSDictionary *errorMessage = [NSDictionary dictionaryWithObject:@"parentDB does not exist" forKey:NSLocalizedDescriptionKey];
-                *outErr = [NSError errorWithDomain:@"QIMDataBase" code:SQLITE_MISUSE userInfo:errorMessage];
+                *outErr = [NSError errorWithDomain:@"STIMDataBase" code:SQLITE_MISUSE userInfo:errorMessage];
             }
 
         }
