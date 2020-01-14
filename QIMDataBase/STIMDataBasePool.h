@@ -2,7 +2,7 @@
 //  STIMDataBasePool.h
 //  STIMDataBase
 //
-//  Created by lilu on 2019/5/29.
+//  Created by lihaibin.li on 2019/5/29.
 //
 
 #import <Foundation/Foundation.h>
